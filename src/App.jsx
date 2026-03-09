@@ -11,22 +11,25 @@ const GLOBAL_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
   html{scroll-behavior:smooth;}
-  body{background:#f8fafc;font-family:'DM Sans',sans-serif;color:#1e293b;overflow-x:hidden;}
-  ::-webkit-scrollbar{width:5px;height:5px;}
+  body{background:#f8fafc;font-family:'DM Sans',sans-serif;color:#1e293b;overflow-x:hidden;-webkit-text-size-adjust:100%;}
+  ::-webkit-scrollbar{width:4px;height:4px;}
   ::-webkit-scrollbar-track{background:#f1f5f9;}
   ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
-  ::-webkit-scrollbar-thumb:hover{background:#1e3a5f;}
   button{font-family:'DM Sans',sans-serif;cursor:pointer;border:none;outline:none;}
   a{text-decoration:none;color:inherit;}
+  img,svg{max-width:100%;}
+
+  /* ── Print ── */
   @media print {
     .no-print{display:none!important;}
-    .print-only{display:block!important;}
     body{background:white!important;color:black!important;}
-    .print-page{page-break-after:always;}
   }
-  .print-only{display:none;}
+
+  /* ── Animations ── */
   .fade-in{animation:fadeIn 0.3s ease forwards;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+
+  /* ── Components ── */
   .topic-item{transition:background 0.1s,border-left-color 0.1s;}
   .topic-item:hover{background:#f1f5f9!important;}
   .opt-btn{transition:all 0.1s;}
@@ -34,22 +37,94 @@ const GLOBAL_STYLES = `
   .card-lift{transition:transform 0.15s,box-shadow 0.15s;}
   .card-lift:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(30,58,95,0.11);}
   .burger-line{transition:all 0.3s ease;transform-origin:center;}
+
+  /* ── Sidebar + overlay ── */
   .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,0.45);z-index:40;backdrop-filter:blur(2px);}
   .sidebar-overlay.open{display:block;}
+
+  /* ── Navbar layout ── */
+  .nav-inner{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .nav-btn{padding:5px 10px;border-radius:6px;font-size:12px;white-space:nowrap;}
+  .nav-btn-ghost{background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);}
+  .nav-btn-solid{background:#fff;color:#1e3a5f;font-weight:700;}
+  .nav-label{display:inline;}
+
+  /* ── Hero buttons ── */
+  .hero-btns{display:flex;gap:10px;flex-wrap:wrap;}
+  .hero-btn{padding:11px 22px;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;}
+
+  /* ── Module grid ── */
+  .module-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));}
+  .action-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-top:28px;}
+
+  /* ── Quiz / Mock option buttons ── */
+  .quiz-options{display:flex;flex-direction:column;gap:7px;}
+
+  /* ── Flashcards ── */
+  .flash-card{perspective:1000px;width:100%;max-width:560px;}
+  .flash-inner{transition:transform 0.5s;transform-style:preserve-3d;position:relative;height:280px;}
+  .flash-inner.flipped{transform:rotateY(180deg);}
+  .flash-front,.flash-back{backface-visibility:hidden;-webkit-backface-visibility:hidden;position:absolute;inset:0;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;}
+  .flash-back{transform:rotateY(180deg);}
+  .flash-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:20px;}
+
+  /* ── Mobile ── */
+  @media(max-width:480px){
+    .nav-label{display:none;}
+    .hero-btn{padding:10px 16px;font-size:13px;flex:1;min-width:0;}
+    .hero-btns{gap:8px;}
+    .module-grid{grid-template-columns:1fr 1fr;}
+    .action-grid{grid-template-columns:1fr 1fr;}
+    .flash-inner{height:240px;}
+    .flash-front,.flash-back{padding:20px;}
+  }
+  @media(max-width:360px){
+    .module-grid{grid-template-columns:1fr;}
+    .action-grid{grid-template-columns:1fr 1fr;}
+  }
+
+  /* ── Sidebar mobile ── */
   @media(max-width:768px){
-    .desktop-sidebar{position:fixed!important;left:-290px!important;top:0!important;height:100vh!important;z-index:50!important;transition:left 0.3s ease!important;width:290px!important;}
+    .desktop-sidebar{position:fixed!important;left:-300px!important;top:0!important;height:100vh!important;z-index:50!important;transition:left 0.3s ease!important;width:min(300px,85vw)!important;overflow-y:auto!important;}
     .desktop-sidebar.open{left:0!important;}
+    .learn-layout{flex-direction:column;}
   }
   @media(min-width:769px){
     .burger-btn{display:none!important;}
-    .desktop-sidebar{position:sticky!important;top:0!important;height:100vh!important;left:auto!important;}
+    .desktop-sidebar{position:sticky!important;top:0!important;height:100vh!important;width:268px!important;min-width:268px!important;}
   }
-  .search-highlight{background:#fef9c3;border-radius:2px;padding:0 2px;}
-  .flash-card{perspective:1000px;}
-  .flash-inner{transition:transform 0.5s;transform-style:preserve-3d;position:relative;}
-  .flash-inner.flipped{transform:rotateY(180deg);}
-  .flash-front,.flash-back{backface-visibility:hidden;-webkit-backface-visibility:hidden;}
-  .flash-back{transform:rotateY(180deg);}
+
+  /* ── Tablet ── */
+  @media(max-width:900px){
+    .module-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
+  }
+
+  /* ── Footer responsive ── */
+  .footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  .footer-stats{display:flex;gap:16px;flex-wrap:wrap;}
+  @media(max-width:600px){
+    .footer-stats{display:none;}
+  }
+
+  /* ── Bookmark pills ── */
+  .bookmark-pills{display:flex;gap:8px;flex-wrap:wrap;}
+
+  /* ── Page wrapper ── */
+  .page-pad{padding:clamp(16px,4vw,44px) clamp(14px,4vw,36px);}
+  .page-max{max-width:1100px;margin:0 auto;}
+  .content-max{max-width:750px;margin:0 auto;}
+
+  /* ── Quiz page ── */
+  .quiz-grid{display:grid;gap:13px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));}
+  @media(max-width:540px){
+    .quiz-grid{grid-template-columns:1fr;}
+  }
+
+  /* ── Section breakdown grid ── */
+  .breakdown-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;}
+  @media(max-width:400px){
+    .breakdown-grid{grid-template-columns:1fr 1fr;}
+  }
 `;
 
 // ─── DATA ─────────────────────────────────────────────────────────────────────
@@ -811,32 +886,32 @@ const renderMd = (text, color = T.navy) =>
   text.replace(/\*\*(.*?)\*\*/g, `<strong style="color:${color};font-weight:600">$1</strong>`);
 
 const NavBar = ({ onHome, extra }) => (
-  <nav className="no-print" style={{ background: T.navy, padding: "0 20px", height: 54, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 35, boxShadow: "0 2px 8px rgba(0,0,0,0.18)" }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-      <div style={{ width: 28, height: 28, background: T.white, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🏢</div>
-      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, fontWeight: 700, color: T.white, cursor: "pointer" }} onClick={onHome}>DC Training</span>
+  <nav className="no-print" style={{ background: T.navy, padding: "0 clamp(12px,3vw,24px)", height: 54, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 35, boxShadow: "0 2px 8px rgba(0,0,0,0.18)", gap: 8, overflow: "hidden" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, minWidth: 0 }}>
+      <div style={{ width: 26, height: 26, background: T.white, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🏢</div>
+      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(13px,3vw,16px)", fontWeight: 700, color: T.white, cursor: "pointer", whiteSpace: "nowrap" }} onClick={onHome}>DC Training</span>
     </div>
-    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>{extra}</div>
+    <div style={{ display: "flex", gap: 5, alignItems: "center", flexShrink: 0 }}>{extra}</div>
   </nav>
 );
 
 const Footer = () => (
-  <footer className="no-print" style={{ background: T.navy, padding: "28px 24px", marginTop: 32 }}>
+  <footer className="no-print" style={{ background: T.navy, padding: "clamp(20px,4vw,32px) clamp(14px,4vw,28px)", marginTop: 32 }}>
     <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 14, marginBottom: 18, paddingBottom: 18, borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 26, height: 26, background: "rgba(255,255,255,0.15)", borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>🏢</div>
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, color: T.white, fontWeight: 700 }}>DC Training</span>
+          <div style={{ width: 24, height: 24, background: "rgba(255,255,255,0.15)", borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>🏢</div>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, color: T.white, fontWeight: 700 }}>DC Training</span>
         </div>
-        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
           {["7 Modules", "23 Topics", "35 Quiz Questions", "30 Mock Questions"].map(t => (
-            <span key={t} style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>{t}</span>
+            <span key={t} style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>{t}</span>
           ))}
         </div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>Data Centre Fundamentals &amp; Operations · Professional Training Programme</p>
-        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>© {new Date().getFullYear()} All rights reserved</p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Data Centre Fundamentals &amp; Operations · Professional Training Programme</p>
+        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>© {new Date().getFullYear()} All rights reserved</p>
       </div>
     </div>
   </footer>
@@ -958,41 +1033,41 @@ export default function App() {
         <style>{GLOBAL_STYLES}</style>
         <NavBar onHome={() => setView("home")} extra={
           <>
-            <button onClick={() => setSearchOpen(true)} style={{ padding: "6px 13px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 13 }}>🔍 Search</button>
-            <button onClick={() => setView("quiz")} style={{ padding: "6px 13px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 13 }}>Quizzes</button>
-            <button onClick={() => { setMockAnswers({}); setMockSubmitted(false); setMockTimer(45*60); setMockTimerRunning(false); setView("mock"); }} style={{ padding: "6px 14px", background: T.white, color: T.navy, borderRadius: 6, fontSize: 13, fontWeight: 700 }}>Mock Test</button>
+            <button onClick={() => setSearchOpen(true)} style={{ padding: "5px 10px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 12, whiteSpace: "nowrap" }}>🔍 <span className="nav-label">Search</span></button>
+            <button onClick={() => setView("quiz")} style={{ padding: "5px 10px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 12, whiteSpace: "nowrap" }}><span className="nav-label">Quizzes</span><span style={{ display: "none" }} className="nav-short">📋</span></button>
+            <button onClick={() => { setMockAnswers({}); setMockSubmitted(false); setMockTimer(45*60); setMockTimerRunning(false); setView("mock"); }} style={{ padding: "5px 11px", background: T.white, color: T.navy, borderRadius: 6, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>Mock Test</button>
           </>
         } />
 
         {/* Search modal */}
         {searchOpen && (
-          <div onClick={() => setSearchOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "10vh" }}>
-            <div onClick={e => e.stopPropagation()} style={{ width: "min(620px, 94vw)", background: T.white, borderRadius: 12, boxShadow: "0 20px 60px rgba(0,0,0,0.25)", overflow: "hidden" }}>
-              <div style={{ padding: "14px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 18 }}>🔍</span>
+          <div onClick={() => setSearchOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "8vh", padding: "8vh 12px 0" }}>
+            <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 600, background: T.white, borderRadius: 12, boxShadow: "0 20px 60px rgba(0,0,0,0.25)", overflow: "hidden" }}>
+              <div style={{ padding: "13px 15px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 9 }}>
+                <span style={{ fontSize: 17 }}>🔍</span>
                 <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search topics, content, key points…"
-                  style={{ flex: 1, fontSize: 15, border: "none", outline: "none", color: T.text, background: "transparent", fontFamily: "'DM Sans', sans-serif" }} />
-                <button onClick={() => setSearchOpen(false)} style={{ color: T.muted, background: "none", fontSize: 18, padding: "0 4px" }}>✕</button>
+                  style={{ flex: 1, fontSize: 15, border: "none", outline: "none", color: T.text, background: "transparent", fontFamily: "'DM Sans', sans-serif", minWidth: 0 }} />
+                <button onClick={() => setSearchOpen(false)} style={{ color: T.muted, background: "none", fontSize: 18, padding: "0 4px", flexShrink: 0 }}>✕</button>
               </div>
-              <div style={{ maxHeight: 380, overflowY: "auto" }}>
+              <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
                 {searchQuery.trim().length < 2 && (
-                  <div style={{ padding: "24px 20px", textAlign: "center", color: T.muted, fontSize: 14 }}>Type at least 2 characters to search across all 23 topics…</div>
+                  <div style={{ padding: "22px 18px", textAlign: "center", color: T.muted, fontSize: 14 }}>Type at least 2 characters to search across all 23 topics…</div>
                 )}
                 {searchResults.length === 0 && searchQuery.trim().length >= 2 && (
-                  <div style={{ padding: "24px 20px", textAlign: "center", color: T.muted, fontSize: 14 }}>No results found for "{searchQuery}"</div>
+                  <div style={{ padding: "22px 18px", textAlign: "center", color: T.muted, fontSize: 14 }}>No results found for "{searchQuery}"</div>
                 )}
                 {searchResults.map((t, i) => (
                   <div key={i} onClick={() => { goToLearn(t.sectionId, t.topicIdx); setSearchOpen(false); setSearchQuery(""); }}
-                    style={{ padding: "12px 16px", borderBottom: `1px solid ${T.border}`, cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}
+                    style={{ padding: "11px 15px", borderBottom: `1px solid ${T.border}`, cursor: "pointer", display: "flex", gap: 10, alignItems: "flex-start" }}
                     onMouseEnter={e => e.currentTarget.style.background = T.bgAlt}
                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <span style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>{t.sectionIcon}</span>
-                    <div>
+                    <span style={{ fontSize: 18, flexShrink: 0, marginTop: 2 }}>{t.sectionIcon}</span>
+                    <div style={{ minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 2 }}>{t.title}</div>
-                      <div style={{ fontSize: 11, color: t.sectionColor, fontWeight: 600, marginBottom: 4 }}>{t.sectionTitle}</div>
-                      <div style={{ fontSize: 12, color: T.slateLt, lineHeight: 1.5 }}>
-                        {t.content.substring(0, 120).replace(/\*\*/g, "")}…
+                      <div style={{ fontSize: 11, color: t.sectionColor, fontWeight: 600, marginBottom: 3 }}>{t.sectionTitle}</div>
+                      <div style={{ fontSize: 12, color: T.slateLt, lineHeight: 1.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {t.content.substring(0, 100).replace(/\*\*/g, "")}…
                       </div>
                     </div>
                   </div>
@@ -1003,46 +1078,46 @@ export default function App() {
         )}
 
         {/* Hero */}
-        <div style={{ background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLt} 100%)`, padding: "clamp(36px,5vw,64px) clamp(18px,5vw,56px)" }}>
+        <div style={{ background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLt} 100%)`, padding: "clamp(28px,5vw,60px) clamp(16px,5vw,52px)" }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }} className="fade-in">
-            <div style={{ display: "inline-block", padding: "4px 14px", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 20, fontSize: 11, color: T.white, letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 18 }}>
+            <div style={{ display: "inline-block", padding: "3px 12px", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 20, fontSize: 10, color: T.white, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 16 }}>
               7 Modules · 23 Topics · Quizzes · Mock Test · Flashcards
             </div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(28px,5vw,52px)", fontWeight: 900, lineHeight: 1.12, color: T.white, marginBottom: 14 }}>
+            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(26px,5vw,50px)", fontWeight: 900, lineHeight: 1.12, color: T.white, marginBottom: 12 }}>
               Data Centre<br /><span style={{ borderBottom: "3px solid rgba(255,255,255,0.4)" }}>Fundamentals</span>
             </h1>
-            <p style={{ fontSize: "clamp(13px,2vw,16px)", color: "rgba(255,255,255,0.7)", maxWidth: 500, lineHeight: 1.75, marginBottom: 26 }}>
+            <p style={{ fontSize: "clamp(13px,2vw,15px)", color: "rgba(255,255,255,0.7)", maxWidth: 480, lineHeight: 1.7, marginBottom: 22 }}>
               Comprehensive professional training — detailed content, real-world examples, quizzes, flashcard revision, and a timed mock exam.
             </p>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div className="hero-btns">
               {lastVisited ? (
-                <button className="card-lift" onClick={() => goToLearn(lastVisited.sectionId, lastVisited.topicIdx)}
-                  style={{ padding: "11px 24px", background: T.white, color: T.navy, borderRadius: 7, fontSize: 14, fontWeight: 700, border: "none" }}>
+                <button className="card-lift hero-btn" onClick={() => goToLearn(lastVisited.sectionId, lastVisited.topicIdx)}
+                  style={{ background: T.white, color: T.navy, border: "none" }}>
                   ↩ Continue Where You Left Off
                 </button>
               ) : (
-                <button className="card-lift" onClick={() => goToLearn(SECTIONS[0].id)}
-                  style={{ padding: "11px 24px", background: T.white, color: T.navy, borderRadius: 7, fontSize: 14, fontWeight: 700, border: "none" }}>
+                <button className="card-lift hero-btn" onClick={() => goToLearn(SECTIONS[0].id)}
+                  style={{ background: T.white, color: T.navy, border: "none" }}>
                   Start Learning →
                 </button>
               )}
-              <button className="card-lift" onClick={() => { setMockAnswers({}); setMockSubmitted(false); setMockTimer(45*60); setMockTimerRunning(false); setView("mock"); }}
-                style={{ padding: "11px 22px", background: "rgba(255,255,255,0.12)", color: T.white, border: "1px solid rgba(255,255,255,0.3)", borderRadius: 7, fontSize: 14, fontWeight: 600 }}>
-                Mock Test (30 Qs · 45 min)
+              <button className="card-lift hero-btn" onClick={() => { setMockAnswers({}); setMockSubmitted(false); setMockTimer(45*60); setMockTimerRunning(false); setView("mock"); }}
+                style={{ background: "rgba(255,255,255,0.12)", color: T.white, border: "1px solid rgba(255,255,255,0.3)" }}>
+                ⏱ Mock Test
               </button>
-              <button className="card-lift" onClick={() => { setFlashSectionId(null); setFlashIdx(0); setFlashFlipped(false); setView("flashcards"); }}
-                style={{ padding: "11px 22px", background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 7, fontSize: 14 }}>
+              <button className="card-lift hero-btn" onClick={() => { setFlashSectionId(null); setFlashIdx(0); setFlashFlipped(false); setView("flashcards"); }}
+                style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.2)" }}>
                 🃏 Flashcards
               </button>
             </div>
           </div>
         </div>
 
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(20px,4vw,48px) clamp(14px,4vw,36px)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(18px,4vw,44px) clamp(14px,4vw,32px)" }}>
 
           {/* Continue / Bookmarks strip */}
           {bookmarkCount > 0 && (
-            <div style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 10, padding: "16px 20px", marginBottom: 28, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 10, padding: "14px 16px", marginBottom: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
               <div style={{ fontSize: 12, color: T.navy, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>🔖 Bookmarked Topics ({bookmarkCount})</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {bookmarkedTopics.map(t => (
@@ -1057,8 +1132,8 @@ export default function App() {
 
           {/* Modules */}
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(17px,3vw,22px)", color: T.text, marginBottom: 6 }}>Course Modules</h2>
-          <p style={{ fontSize: 13, color: T.slateLt, marginBottom: 22 }}>Click any module to begin. Your quiz progress is tracked automatically.</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(255px,1fr))", gap: 14 }}>
+          <p style={{ fontSize: 13, color: T.slateLt, marginBottom: 20 }}>Click any module to begin. Your quiz progress is tracked automatically.</p>
+          <div className="module-grid">
             {SECTIONS.map((s, i) => {
               const done = Object.keys(progress).filter(k => k.startsWith(s.id + "-")).length;
               const total = (QUIZ_QUESTIONS[s.id] || []).length;
@@ -1080,7 +1155,7 @@ export default function App() {
           </div>
 
           {/* Quick actions */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px,1fr))", gap: 12, marginTop: 32 }}>
+          <div className="action-grid">
             {[
               { icon: "🃏", label: "Flashcard Revision", sub: `${allFlashcards.length} cards across all topics`, action: () => { setFlashSectionId(null); setFlashIdx(0); setFlashFlipped(false); setView("flashcards"); } },
               { icon: "⏱️", label: "Timed Mock Test", sub: "30 questions · 45 minutes", action: () => { setMockAnswers({}); setMockSubmitted(false); setMockTimer(45*60); setMockTimerRunning(false); setView("mock"); } },
@@ -1108,24 +1183,24 @@ export default function App() {
       <div style={{ minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column" }}>
         <style>{GLOBAL_STYLES}</style>
         {/* Top bar */}
-        <div className="no-print" style={{ background: T.navy, height: 52, display: "flex", alignItems: "center", padding: "0 14px", gap: 10, position: "sticky", top: 0, zIndex: 35, flexShrink: 0, boxShadow: "0 2px 6px rgba(0,0,0,0.18)" }}>
+        <div className="no-print" style={{ background: T.navy, height: 52, display: "flex", alignItems: "center", padding: "0 clamp(10px,3vw,16px)", gap: 6, position: "sticky", top: 0, zIndex: 35, flexShrink: 0, boxShadow: "0 2px 6px rgba(0,0,0,0.18)" }}>
           <button className="burger-btn" onClick={() => setSidebarOpen(o => !o)}
             style={{ width: 34, height: 34, background: "rgba(255,255,255,0.12)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 4, borderRadius: 6, border: "none", flexShrink: 0 }}>
             <div className="burger-line" style={{ width: 16, height: 2, background: T.white }} />
             <div className="burger-line" style={{ width: 16, height: 2, background: T.white, opacity: sidebarOpen ? 0 : 1 }} />
             <div className="burger-line" style={{ width: 16, height: 2, background: T.white }} />
           </button>
-          <button onClick={() => setView("home")} style={{ background: "rgba(255,255,255,0.1)", color: T.white, fontSize: 12, padding: "5px 9px", borderRadius: 5, border: "none", whiteSpace: "nowrap" }}>← Home</button>
-          <div style={{ flex: 1, overflow: "hidden", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 15 }}>{activeSection.icon}</span>
-            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeSection.title}</span>
+          <button onClick={() => setView("home")} style={{ background: "rgba(255,255,255,0.1)", color: T.white, fontSize: 12, padding: "5px 8px", borderRadius: 5, border: "none", whiteSpace: "nowrap", flexShrink: 0 }}>← Home</button>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 5, overflow: "hidden" }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>{activeSection.icon}</span>
+            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeSection.title}</span>
           </div>
-          <button onClick={() => toggleBookmark(activeSectionId, activeTopicIdx)} title={bookmarked ? "Remove bookmark" : "Bookmark this topic"}
-            style={{ background: "none", fontSize: 18, padding: "0 4px", border: "none", filter: bookmarked ? "none" : "grayscale(1) opacity(0.5)" }}>🔖</button>
-          <button onClick={exportPDF} title="Export this topic as PDF"
-            style={{ padding: "5px 10px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 12, whiteSpace: "nowrap" }}>⬇ PDF</button>
+          <button onClick={() => toggleBookmark(activeSectionId, activeTopicIdx)} title={bookmarked ? "Remove bookmark" : "Bookmark"}
+            style={{ background: "none", fontSize: 17, padding: "0 3px", border: "none", filter: bookmarked ? "none" : "grayscale(1) opacity(0.5)", flexShrink: 0 }}>🔖</button>
+          <button onClick={exportPDF} title="Export PDF"
+            style={{ padding: "5px 8px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}>⬇ PDF</button>
           <button onClick={() => { setQuizSectionId(activeSection.id); setQuizAnswers({}); setQuizSubmitted(false); setView("quiz"); }}
-            style={{ padding: "5px 12px", background: T.white, color: T.navy, border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>Quiz →</button>
+            style={{ padding: "5px 10px", background: T.white, color: T.navy, border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}>Quiz →</button>
         </div>
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden", position: "relative" }}>
@@ -1133,7 +1208,7 @@ export default function App() {
 
           {/* Sidebar */}
           <div className={`desktop-sidebar ${sidebarOpen ? "open" : ""}`}
-            style={{ width: 272, background: T.white, borderRight: `1px solid ${T.border}`, overflowY: "auto", flexShrink: 0 }}>
+            style={{ background: T.white, borderRight: `1px solid ${T.border}`, overflowY: "auto", flexShrink: 0 }}>
             {SECTIONS.map(sec => (
               <div key={sec.id}>
                 <div style={{ padding: "10px 13px 6px", borderTop: `1px solid ${T.border}`, background: T.bgAlt, display: "flex", alignItems: "center", gap: 7 }}>
@@ -1145,7 +1220,7 @@ export default function App() {
                   const bm = isBookmarked(sec.id, ti);
                   return (
                     <button key={ti} className="topic-item" onClick={() => goToLearn(sec.id, ti)}
-                      style={{ width: "100%", textAlign: "left", padding: "9px 12px 9px 26px", background: isActive ? `${sec.color}0d` : "transparent", borderLeft: `3px solid ${isActive ? sec.color : "transparent"}`, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                      style={{ width: "100%", textAlign: "left", padding: "9px 12px 9px 24px", background: isActive ? `${sec.color}0d` : "transparent", borderLeft: `3px solid ${isActive ? sec.color : "transparent"}`, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{ fontSize: 12, color: isActive ? T.text : T.slateLt, lineHeight: 1.4, flex: 1, fontWeight: isActive ? 600 : 400 }}>{t.title}</span>
                       {bm && <span style={{ fontSize: 10 }}>🔖</span>}
                     </button>
@@ -1166,53 +1241,53 @@ export default function App() {
           </div>
 
           {/* Content */}
-          <div ref={contentRef} style={{ flex: 1, overflowY: "auto", padding: "clamp(18px,4vw,40px)", background: T.bg }}>
-            <div style={{ maxWidth: 750, margin: "0 auto" }} className="fade-in">
+          <div ref={contentRef} style={{ flex: 1, minWidth: 0, overflowY: "auto", padding: "clamp(14px,3.5vw,36px) clamp(14px,3.5vw,36px)", background: T.bg }}>
+            <div style={{ maxWidth: 730, margin: "0 auto" }} className="fade-in">
               {/* Title */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 13, marginBottom: 26, paddingBottom: 20, borderBottom: `2px solid ${T.border}` }}>
-                <div style={{ width: 4, minHeight: 46, background: activeSection.color, borderRadius: 2, flexShrink: 0, marginTop: 2 }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: activeSection.color, letterSpacing: 3, textTransform: "uppercase", fontWeight: 700, marginBottom: 6 }}>{activeSection.icon} {activeSection.title}</div>
-                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(19px,3.5vw,26px)", color: T.text, lineHeight: 1.25 }}>{activeTopic.title}</h2>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 11, marginBottom: 22, paddingBottom: 18, borderBottom: `2px solid ${T.border}` }}>
+                <div style={{ width: 4, minHeight: 44, background: activeSection.color, borderRadius: 2, flexShrink: 0, marginTop: 2 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, color: activeSection.color, letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 5 }}>{activeSection.icon} {activeSection.title}</div>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(18px,3.5vw,25px)", color: T.text, lineHeight: 1.25, wordBreak: "break-word" }}>{activeTopic.title}</h2>
                 </div>
                 <button onClick={() => toggleBookmark(activeSectionId, activeTopicIdx)} className="no-print"
-                  style={{ background: "none", fontSize: 20, border: "none", cursor: "pointer", filter: bookmarked ? "none" : "grayscale(1) opacity(0.4)", flexShrink: 0 }}>🔖</button>
+                  style={{ background: "none", fontSize: 19, border: "none", cursor: "pointer", filter: bookmarked ? "none" : "grayscale(1) opacity(0.4)", flexShrink: 0, marginTop: 2 }}>🔖</button>
               </div>
 
               {/* Body */}
-              <div style={{ background: T.white, borderRadius: 10, padding: "clamp(16px,4vw,28px)", marginBottom: 16, border: `1px solid ${T.border}`, lineHeight: 1.9, fontSize: "clamp(13px,2vw,15px)", color: T.slate, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+              <div style={{ background: T.white, borderRadius: 10, padding: "clamp(14px,3.5vw,26px)", marginBottom: 14, border: `1px solid ${T.border}`, lineHeight: 1.85, fontSize: "clamp(13px,2vw,15px)", color: T.slate, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", wordBreak: "break-word" }}>
                 {activeTopic.content.split("\n\n").map((para, i, arr) => (
-                  <p key={i} style={{ marginBottom: i < arr.length - 1 ? 16 : 0 }}
+                  <p key={i} style={{ marginBottom: i < arr.length - 1 ? 15 : 0 }}
                     dangerouslySetInnerHTML={{ __html: renderMd(para, activeSection.color) }} />
                 ))}
               </div>
 
               {/* Example */}
-              <div style={{ background: `${activeSection.color}08`, border: `1px solid ${activeSection.color}25`, borderRadius: 10, padding: "clamp(13px,3vw,22px)", marginBottom: 16 }}>
-                <div style={{ fontSize: 10, color: activeSection.color, letterSpacing: 3, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Real-World Example</div>
-                <p style={{ fontSize: "clamp(13px,2vw,15px)", color: T.slate, lineHeight: 1.85 }}
+              <div style={{ background: `${activeSection.color}08`, border: `1px solid ${activeSection.color}22`, borderRadius: 10, padding: "clamp(12px,3vw,20px)", marginBottom: 14 }}>
+                <div style={{ fontSize: 10, color: activeSection.color, letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Real-World Example</div>
+                <p style={{ fontSize: "clamp(13px,2vw,14px)", color: T.slate, lineHeight: 1.8, wordBreak: "break-word" }}
                   dangerouslySetInnerHTML={{ __html: renderMd(activeTopic.example, activeSection.color) }} />
               </div>
 
               {/* Key Points */}
-              <div style={{ background: T.bgAlt, borderRadius: 10, padding: "clamp(13px,3vw,22px)", marginBottom: 28, border: `1px solid ${T.border}` }}>
-                <div style={{ fontSize: 10, color: T.muted, letterSpacing: 3, textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>Key Points</div>
+              <div style={{ background: T.bgAlt, borderRadius: 10, padding: "clamp(12px,3vw,20px)", marginBottom: 26, border: `1px solid ${T.border}` }}>
+                <div style={{ fontSize: 10, color: T.muted, letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 11 }}>Key Points</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {activeTopic.keyPoints.map((kp, i) => (
                     <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: activeSection.color, marginTop: 7, flexShrink: 0 }} />
-                      <span style={{ fontSize: "clamp(12px,1.8vw,14px)", color: T.textSm, lineHeight: 1.6 }}>{kp}</span>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: activeSection.color, marginTop: 6, flexShrink: 0 }} />
+                      <span style={{ fontSize: "clamp(12px,1.8vw,13px)", color: T.textSm, lineHeight: 1.6 }}>{kp}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Nav */}
-              <div className="no-print" style={{ display: "flex", justifyContent: "space-between", gap: 10, paddingTop: 18, borderTop: `1px solid ${T.border}` }}>
+              <div className="no-print" style={{ display: "flex", justifyContent: "space-between", gap: 8, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
                 <button onClick={() => {
                   if (activeTopicIdx > 0) goToLearn(activeSectionId, activeTopicIdx - 1);
                   else { const idx = SECTIONS.findIndex(s => s.id === activeSectionId); if (idx > 0) goToLearn(SECTIONS[idx-1].id, SECTIONS[idx-1].topics.length - 1); }
-                }} style={{ padding: "9px 16px", background: T.white, color: T.slateLt, borderRadius: 7, border: `1px solid ${T.border}`, fontSize: 13 }}>← Previous</button>
+                }} style={{ padding: "9px 14px", background: T.white, color: T.slateLt, borderRadius: 7, border: `1px solid ${T.border}`, fontSize: 13, flexShrink: 0 }}>← Prev</button>
                 <button onClick={() => {
                   if (activeTopicIdx < activeSection.topics.length - 1) goToLearn(activeSectionId, activeTopicIdx + 1);
                   else { const idx = SECTIONS.findIndex(s => s.id === activeSectionId); if (idx < SECTIONS.length - 1) goToLearn(SECTIONS[idx+1].id, 0); else { setQuizSectionId(activeSectionId); setQuizAnswers({}); setQuizSubmitted(false); setView("quiz"); } }
@@ -1238,20 +1313,20 @@ export default function App() {
         <NavBar onHome={() => setView("home")} extra={
           <>
             <select value={flashSectionId || ""} onChange={e => { setFlashSectionId(e.target.value || null); setFlashIdx(0); setFlashFlipped(false); }}
-              style={{ padding: "6px 10px", border: `1px solid rgba(255,255,255,0.25)`, borderRadius: 6, background: "rgba(255,255,255,0.1)", color: T.white, fontSize: 13, fontFamily: "'DM Sans', sans-serif" }}>
+              style={{ padding: "5px 8px", border: `1px solid rgba(255,255,255,0.25)`, borderRadius: 6, background: "rgba(255,255,255,0.1)", color: T.white, fontSize: 11, fontFamily: "'DM Sans', sans-serif", maxWidth: "38vw" }}>
               <option value="" style={{ color: T.text, background: T.white }}>All Sections</option>
-              {SECTIONS.map(s => <option key={s.id} value={s.id} style={{ color: T.text, background: T.white }}>{s.icon} {s.title.replace("Data Centre ", "")}</option>)}
+              {SECTIONS.map(s => <option key={s.id} value={s.id} style={{ color: T.text, background: T.white }}>{s.title.replace("Data Centre ", "")}</option>)}
             </select>
-            <button onClick={() => setView("home")} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 13 }}>← Home</button>
+            <button onClick={() => setView("home")} style={{ padding: "5px 10px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 12, whiteSpace: "nowrap" }}>← Home</button>
           </>
         } />
 
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "clamp(24px,4vw,48px) 16px" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "clamp(18px,4vw,44px) clamp(14px,4vw,24px)" }}>
           {/* Progress */}
-          <div style={{ width: "min(560px, 100%)", marginBottom: 20 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+          <div style={{ width: "100%", maxWidth: 560, marginBottom: 18 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
               <span style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Card {flashIdx + 1} of {total}</span>
-              <span style={{ fontSize: 12, color: card.sectionColor, fontWeight: 600 }}>{card.sectionIcon} {card.sectionTitle.replace("Data Centre ", "")}</span>
+              <span style={{ fontSize: 11, color: card.sectionColor, fontWeight: 600 }}>{card.sectionIcon} {card.sectionTitle.replace("Data Centre ", "")}</span>
             </div>
             <div style={{ height: 4, background: T.border, borderRadius: 2 }}>
               <div style={{ height: "100%", width: `${((flashIdx + 1) / total) * 100}%`, background: card.sectionColor, borderRadius: 2, transition: "width 0.3s" }} />
@@ -1259,35 +1334,35 @@ export default function App() {
           </div>
 
           {/* Card */}
-          <div className="flash-card" style={{ width: "min(560px, 100%)", height: 300, cursor: "pointer", marginBottom: 24 }} onClick={() => setFlashFlipped(f => !f)}>
-            <div className={`flash-inner ${flashFlipped ? "flipped" : ""}`} style={{ width: "100%", height: "100%" }}>
+          <div className="flash-card" style={{ cursor: "pointer", marginBottom: 20, width: "100%" }} onClick={() => setFlashFlipped(f => !f)}>
+            <div className={`flash-inner ${flashFlipped ? "flipped" : ""}`}>
               {/* Front */}
-              <div className="flash-front" style={{ position: "absolute", inset: 0, background: T.navy, borderRadius: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32, boxShadow: "0 8px 32px rgba(30,58,95,0.18)" }}>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, marginBottom: 20 }}>Question</div>
-                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(16px,3vw,20px)", color: T.white, textAlign: "center", lineHeight: 1.5, marginBottom: 12 }}>{card.front}</p>
-                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 20 }}>Tap to reveal key point</p>
+              <div className="flash-front" style={{ background: T.navy, boxShadow: "0 8px 32px rgba(30,58,95,0.18)" }}>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 16 }}>Topic</div>
+                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(15px,3vw,19px)", color: T.white, textAlign: "center", lineHeight: 1.5 }}>{card.front}</p>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>Tap to reveal key point</p>
               </div>
               {/* Back */}
-              <div className="flash-back" style={{ position: "absolute", inset: 0, background: T.white, border: `2px solid ${card.sectionColor}`, borderRadius: 16, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32, boxShadow: "0 8px 32px rgba(30,58,95,0.1)" }}>
-                <div style={{ fontSize: 11, color: card.sectionColor, letterSpacing: 3, textTransform: "uppercase", fontWeight: 700, marginBottom: 18 }}>Key Point</div>
-                <p style={{ fontSize: "clamp(14px,2.5vw,17px)", color: T.text, textAlign: "center", lineHeight: 1.7, fontWeight: 500 }}>{card.back}</p>
+              <div className="flash-back" style={{ background: T.white, border: `2px solid ${card.sectionColor}`, boxShadow: "0 8px 32px rgba(30,58,95,0.1)" }}>
+                <div style={{ fontSize: 10, color: card.sectionColor, letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 14 }}>Key Point</div>
+                <p style={{ fontSize: "clamp(13px,2.5vw,16px)", color: T.text, textAlign: "center", lineHeight: 1.7, fontWeight: 500 }}>{card.back}</p>
               </div>
             </div>
           </div>
 
           {/* Controls */}
-          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+          <div className="flash-controls">
             <button onClick={() => { setFlashIdx(i => Math.max(0, i - 1)); setFlashFlipped(false); }}
               disabled={flashIdx === 0}
-              style={{ padding: "9px 20px", background: T.white, color: flashIdx === 0 ? T.muted : T.slate, border: `1px solid ${T.border}`, borderRadius: 7, fontSize: 14, cursor: flashIdx === 0 ? "not-allowed" : "pointer" }}>← Prev</button>
-            <button onClick={() => { setFlashFlipped(f => !f); }}
-              style={{ padding: "9px 20px", background: T.bgAlt, color: T.navy, border: `1px solid ${T.border}`, borderRadius: 7, fontSize: 14, fontWeight: 600 }}>Flip</button>
+              style={{ padding: "9px 18px", background: T.white, color: flashIdx === 0 ? T.muted : T.slate, border: `1px solid ${T.border}`, borderRadius: 7, fontSize: 13, cursor: flashIdx === 0 ? "not-allowed" : "pointer" }}>← Prev</button>
+            <button onClick={() => setFlashFlipped(f => !f)}
+              style={{ padding: "9px 18px", background: T.bgAlt, color: T.navy, border: `1px solid ${T.border}`, borderRadius: 7, fontSize: 13, fontWeight: 600 }}>Flip</button>
             <button onClick={() => { setFlashIdx(i => Math.min(total - 1, i + 1)); setFlashFlipped(false); }}
               disabled={flashIdx === total - 1}
-              style={{ padding: "9px 20px", background: flashIdx < total - 1 ? T.navy : T.bgAlt, color: flashIdx < total - 1 ? T.white : T.muted, border: "none", borderRadius: 7, fontSize: 14, fontWeight: 600, cursor: flashIdx === total - 1 ? "not-allowed" : "pointer" }}>Next →</button>
+              style={{ padding: "9px 18px", background: flashIdx < total - 1 ? T.navy : T.bgAlt, color: flashIdx < total - 1 ? T.white : T.muted, border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: flashIdx === total - 1 ? "not-allowed" : "pointer" }}>Next →</button>
           </div>
           <button onClick={() => { setFlashIdx(Math.floor(Math.random() * total)); setFlashFlipped(false); }}
-            style={{ marginTop: 12, padding: "7px 16px", background: "none", color: T.slateLt, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer" }}>🔀 Shuffle</button>
+            style={{ marginTop: 10, padding: "7px 14px", background: "none", color: T.slateLt, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer" }}>🔀 Shuffle</button>
         </div>
         <Footer />
       </div>
@@ -1304,8 +1379,8 @@ export default function App() {
         } />
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "clamp(20px,4vw,44px) clamp(14px,4vw,28px)" }}>
           <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(20px,4vw,28px)", color: T.text, marginBottom: 8 }}>Topic Quizzes</h2>
-          <p style={{ fontSize: 14, color: T.slateLt, marginBottom: 28 }}>5 questions per module with full explanations after submission.</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px,1fr))", gap: 13 }}>
+          <p style={{ fontSize: 13, color: T.slateLt, marginBottom: 24 }}>5 questions per module with full explanations after submission.</p>
+          <div className="quiz-grid">
             {SECTIONS.map((s, i) => {
               const done = Object.keys(progress).filter(k => k.startsWith(s.id + "-")).length;
               const total = (QUIZ_QUESTIONS[s.id] || []).length;
@@ -1521,9 +1596,9 @@ export default function App() {
                   )}
                 </div>
               </div>
-              <div style={{ marginBottom: 20 }}>
+                <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 10, color: T.muted, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 10 }}>Score by Module</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px,1fr))", gap: 8 }}>
+                <div className="breakdown-grid">
                   {sectionBreakdown.map(s => (
                     <div key={s.id} style={{ background: T.white, borderRadius: 8, padding: "10px 12px", border: `1px solid ${T.border}`, borderTop: `3px solid ${s.color}` }}>
                       <div style={{ fontSize: 10, color: s.color, marginBottom: 3, fontWeight: 600 }}>{s.icon} {s.title.replace("Data Centre ", "")}</div>
@@ -1537,9 +1612,9 @@ export default function App() {
               </div>
               <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
                 <button onClick={() => { setMockAnswers({}); setMockSubmitted(false); setMockTimer(45*60); setMockTimerRunning(false); window.scrollTo(0,0); }}
-                  style={{ padding: "10px 22px", background: T.navy, color: T.white, borderRadius: 7, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Retake Test</button>
+                  style={{ padding: "10px 20px", background: T.navy, color: T.white, borderRadius: 7, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Retake Test</button>
                 <button onClick={() => goToLearn(SECTIONS[0].id)}
-                  style={{ padding: "10px 20px", background: T.white, color: T.navy, borderRadius: 7, border: `1px solid ${T.border}`, fontSize: 13, cursor: "pointer" }}>Review Learning</button>
+                  style={{ padding: "10px 18px", background: T.white, color: T.navy, borderRadius: 7, border: `1px solid ${T.border}`, fontSize: 13, cursor: "pointer" }}>Review Learning</button>
               </div>
             </div>
           )}
@@ -1547,14 +1622,14 @@ export default function App() {
 
         {/* Sticky progress bar */}
         {!mockSubmitted && (
-          <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: T.white, borderTop: `1px solid ${T.border}`, padding: "9px 18px", zIndex: 30, boxShadow: "0 -2px 8px rgba(0,0,0,0.06)" }}>
-            <div style={{ maxWidth: 770, margin: "0 auto", display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ flex: 1, height: 5, background: T.bgAlt, borderRadius: 3 }}>
+          <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: T.white, borderTop: `1px solid ${T.border}`, padding: "8px clamp(12px,3vw,20px)", zIndex: 30, boxShadow: "0 -2px 8px rgba(0,0,0,0.06)" }}>
+            <div style={{ maxWidth: 770, margin: "0 auto", display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ flex: 1, height: 5, background: T.bgAlt, borderRadius: 3, minWidth: 0 }}>
                 <div style={{ height: "100%", width: `${(answered/MOCK_TEST.length)*100}%`, background: T.navy, borderRadius: 3, transition: "width 0.3s" }} />
               </div>
-              <span style={{ fontSize: 12, color: T.slateLt, fontWeight: 600, whiteSpace: "nowrap" }}>{answered}/30 answered</span>
+              <span style={{ fontSize: 12, color: T.slateLt, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>{answered}/30</span>
               {mockTimerRunning && (
-                <span style={{ fontSize: 13, fontWeight: 700, color: timerColor, fontFamily: "monospace", whiteSpace: "nowrap" }}>⏱ {fmtTime(mockTimer)}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: timerColor, fontFamily: "monospace", whiteSpace: "nowrap", flexShrink: 0 }}>⏱ {fmtTime(mockTimer)}</span>
               )}
             </div>
           </div>
