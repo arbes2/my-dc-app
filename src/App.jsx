@@ -1,1298 +1,550 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 
-const T = {
-  bg:"#f8fafc", bgAlt:"#f1f5f9", card:"#ffffff", border:"#e2e8f0", borderMd:"#cbd5e1",
-  navy:"#1e3a5f", navyDk:"#163158", navyLt:"#2c5282", slate:"#475569", slateLt:"#64748b",
-  muted:"#94a3b8", text:"#1e293b", textSm:"#334155", success:"#16a34a", danger:"#dc2626",
-  warning:"#d97706", white:"#ffffff",
-};
-
-const GLOBAL_STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap');
-  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-  html{scroll-behavior:smooth;}
-  body{background:#f8fafc;font-family:'DM Sans',sans-serif;color:#1e293b;overflow-x:hidden;-webkit-text-size-adjust:100%;}
-  ::-webkit-scrollbar{width:4px;height:4px;}
-  ::-webkit-scrollbar-track{background:#f1f5f9;}
-  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
-  button{font-family:'DM Sans',sans-serif;cursor:pointer;border:none;outline:none;}
-  a{text-decoration:none;color:inherit;}
-  img,svg{max-width:100%;}
-
-  /* ── Print ── */
-  @media print {
-    .no-print{display:none!important;}
-    body{background:white!important;color:black!important;}
-  }
-
-  /* ── Animations ── */
-  .fade-in{animation:fadeIn 0.3s ease forwards;}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
-
-  /* ── Components ── */
-  .topic-item{transition:background 0.1s,border-left-color 0.1s;}
-  .topic-item:hover{background:#f1f5f9!important;}
-  .opt-btn{transition:all 0.1s;}
-  .opt-btn:hover:not(:disabled){background:#f1f5f9!important;border-color:#94a3b8!important;}
-  .card-lift{transition:transform 0.15s,box-shadow 0.15s;}
-  .card-lift:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(30,58,95,0.11);}
-  .burger-line{transition:all 0.3s ease;transform-origin:center;}
-
-  /* ── Sidebar + overlay ── */
-  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,0.45);z-index:40;backdrop-filter:blur(2px);}
-  .sidebar-overlay.open{display:block;}
-
-  /* ── Navbar layout ── */
-  .nav-inner{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-  .nav-btn{padding:5px 10px;border-radius:6px;font-size:12px;white-space:nowrap;}
-  .nav-btn-ghost{background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);}
-  .nav-btn-solid{background:#fff;color:#1e3a5f;font-weight:700;}
-  .nav-label{display:inline;}
-
-  /* ── Hero buttons ── */
-  .hero-btns{display:flex;gap:10px;flex-wrap:wrap;}
-  .hero-btn{padding:11px 22px;border-radius:7px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;}
-
-  /* ── Module grid ── */
-  .module-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));}
-  .action-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));margin-top:28px;}
-
-  /* ── Quiz / Mock option buttons ── */
-  .quiz-options{display:flex;flex-direction:column;gap:7px;}
-
-  /* ── Flashcards ── */
-  .flash-card{perspective:1000px;width:100%;max-width:560px;}
-  .flash-inner{transition:transform 0.5s;transform-style:preserve-3d;position:relative;height:280px;}
-  .flash-inner.flipped{transform:rotateY(180deg);}
-  .flash-front,.flash-back{backface-visibility:hidden;-webkit-backface-visibility:hidden;position:absolute;inset:0;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;}
-  .flash-back{transform:rotateY(180deg);}
-  .flash-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:20px;}
-
-  /* ── Mobile ── */
-  @media(max-width:480px){
-    .nav-label{display:none;}
-    .hero-btn{padding:10px 16px;font-size:13px;flex:1;min-width:0;}
-    .hero-btns{gap:8px;}
-    .module-grid{grid-template-columns:1fr 1fr;}
-    .action-grid{grid-template-columns:1fr 1fr;}
-    .flash-inner{height:240px;}
-    .flash-front,.flash-back{padding:20px;}
-  }
-  @media(max-width:360px){
-    .module-grid{grid-template-columns:1fr;}
-    .action-grid{grid-template-columns:1fr 1fr;}
-  }
-
-  /* ── Sidebar mobile ── */
-  @media(max-width:768px){
-    .desktop-sidebar{position:fixed!important;left:-300px!important;top:0!important;height:100vh!important;z-index:50!important;transition:left 0.3s ease!important;width:min(300px,85vw)!important;overflow-y:auto!important;}
-    .desktop-sidebar.open{left:0!important;}
-    .learn-layout{flex-direction:column;}
-  }
-  @media(min-width:769px){
-    .burger-btn{display:none!important;}
-    .desktop-sidebar{position:sticky!important;top:0!important;height:100vh!important;width:268px!important;min-width:268px!important;}
-  }
-
-  /* ── Tablet ── */
-  @media(max-width:900px){
-    .module-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr));}
-  }
-
-  /* ── Footer responsive ── */
-  .footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
-  .footer-stats{display:flex;gap:16px;flex-wrap:wrap;}
-  @media(max-width:600px){
-    .footer-stats{display:none;}
-  }
-
-  /* ── Bookmark pills ── */
-  .bookmark-pills{display:flex;gap:8px;flex-wrap:wrap;}
-
-  /* ── Page wrapper ── */
-  .page-pad{padding:clamp(16px,4vw,44px) clamp(14px,4vw,36px);}
-  .page-max{max-width:1100px;margin:0 auto;}
-  .content-max{max-width:750px;margin:0 auto;}
-
-  /* ── Quiz page ── */
-  .quiz-grid{display:grid;gap:13px;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));}
-  @media(max-width:540px){
-    .quiz-grid{grid-template-columns:1fr;}
-  }
-
-  /* ── Section breakdown grid ── */
-  .breakdown-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px;}
-  @media(max-width:400px){
-    .breakdown-grid{grid-template-columns:1fr 1fr;}
-  }
-`;
-
-// ─── DATA ─────────────────────────────────────────────────────────────────────
+// ─── DATA ──────────────────────────────────────────────────────────────────────
 
 const SECTIONS = [
   {
-    id: "fundamentals", icon: "🏢", color: "#1e3a5f",
+    id: "fundamentals",
+    icon: "🏢",
     title: "Data Centre Fundamentals",
+    color: "#00B4D8",
     topics: [
       {
         title: "What Is a Data Centre?",
-        content: `A data centre is a dedicated physical facility purpose-built to house IT computing equipment, network infrastructure, and storage systems in a controlled, secure environment. Think of it as the backbone of the digital world — every website you visit, every email you send, every video you stream, and every online transaction you make is processed and stored somewhere inside one of these buildings.
+        content: `A data centre is a dedicated physical facility purpose-built to house IT computing equipment, network infrastructure, and storage systems in a controlled, secure environment. Think of it as the brain of the digital world — every website you visit, every email you send, and every video you stream is processed and stored somewhere inside one of these buildings.
 
-**Scale and Variety**
-Data centres range enormously in scale. At the smallest end are enterprise server rooms — a locked room in an office building housing a few racks of servers. At the largest are hyperscale data centres built by Amazon, Google, Microsoft, and Meta — campus-scale facilities covering hundreds of thousands of square feet consuming tens of megawatts of power. Between these extremes sit colocation facilities (where multiple businesses rent space) and edge data centres (smaller facilities positioned closer to end users to reduce latency).
-
-**What Happens Inside**
-Inside a data centre, thousands of servers process requests every second. Storage arrays hold petabytes of data. Networking equipment routes traffic between servers and out to the internet. Cooling systems remove the enormous heat generated by all this computing. Power systems ensure every component receives clean, reliable electricity. And security systems ensure only authorised personnel can enter.
-
-**Why They Matter**
-Without data centres, there is no cloud computing, no streaming, no online banking, no social media, no GPS navigation, no email. They are as essential to modern life as power stations — and like power stations, they must run continuously and reliably.`,
-        example: `**Example — Netflix:** When you press play on Netflix, your device sends a request that travels across the internet to a Netflix data centre — likely located in one of their AWS-hosted facilities. Inside, servers identify your account, check your subscription, determine the best video quality for your connection, and begin streaming encoded video data back to your device. If you're in the UK, that data may originate from servers physically located in Dublin or Amsterdam to minimise latency. All of this happens in under two seconds. Netflix operates across dozens of data centres globally to ensure that if one has a problem, others seamlessly take over — you never notice a thing.`,
-        keyPoints: [
-          "A dedicated facility housing IT equipment, networking, and storage",
-          "Ranges from small server rooms to hyperscale campuses of 100,000+ sq ft",
-          "Operates 24 hours a day, 365 days a year without interruption",
-          "Provides the physical foundation for cloud computing and all digital services",
-          "Classified Tier I–IV by the Uptime Institute based on resilience capability",
-          "Three main types: enterprise (owned), colocation (shared), and hyperscale (cloud)",
-          "Critical national infrastructure in most developed economies",
-        ],
+Modern data centres range from small server rooms the size of a cupboard to hyperscale campus facilities covering hundreds of thousands of square feet. They operate 24 hours a day, 365 days a year, and must maintain extremely stable environmental conditions — precise temperature, humidity, and power — to ensure equipment functions reliably.`,
+        example: `**Real-World Example:** When you watch Netflix, your device connects to a Netflix data centre — possibly located in Virginia, USA, or Amsterdam, Netherlands. Inside that facility, thousands of servers stream your chosen film in milliseconds. If you pause mid-scene, the data centre "remembers" exactly where you were. Without it, streaming services simply could not exist.`,
+        keyPoints: ["24/7 continuous operation", "Controlled temperature & humidity", "Tier I–IV classification", "Ranges from server closets to hyperscale facilities", "Foundation of cloud computing"],
       },
       {
-        title: "Understanding Basic Design Requirements",
-        content: `Every data centre — from a small server room to a hyperscale campus — must be designed around six fundamental requirements. These are not aspirational goals; they are engineering mandates that shape every decision from site selection to cable routing.
+        title: "Basic Design Requirements",
+        content: `Every data centre must be designed around six core pillars: Availability, Scalability, Security, Efficiency, Resilience, and Compliance. These are not aspirational — they are engineering requirements that dictate every decision from cabling routes to how many generators are installed.
 
-**Availability**
-The facility must remain operational despite equipment failures, planned maintenance, or unexpected events. Availability is typically expressed as a percentage of uptime over a year — Tier III targets 99.982%, meaning no more than about 1.6 hours of downtime annually. Achieving this requires redundant systems: backup power, multiple cooling units, and diverse network paths.
-
-**Scalability**
-Business demand for computing grows continuously. A data centre designed for today's load must be capable of expansion without a complete rebuild. Good design includes spare capacity in power infrastructure (transformers, UPS, PDUs), cooling (chiller headroom, cooling tower capacity), physical space (pre-planned cable routes, empty rack positions), and network (dark fibre, switch port headroom).
-
-**Security**
-Data centres hold some of the world's most sensitive information. Security operates at multiple layers: perimeter fencing and vehicle barriers, CCTV, multi-factor access control (card + PIN + biometric), mantrap entry systems, cage and cabinet locks, and cybersecurity at the network level. Physical security breaches can result in data theft, regulatory penalties, and loss of client trust.
-
-**Efficiency**
-Energy is the largest operational cost of a data centre — a 10MW facility can spend £8–12 million per year on electricity. Efficiency is measured primarily by PUE (Power Usage Effectiveness). A PUE of 1.5 means 50% extra energy is used for overhead (cooling, UPS losses, lighting). Industry leaders achieve PUE below 1.2. Efficiency improvements directly reduce operating costs and carbon emissions.
-
-**Resilience**
-Closely related to availability, resilience describes how well the facility withstands and recovers from adverse events — hardware failures, software faults, extreme weather, human error, cyber attacks, or loss of utility supply. Resilient design includes fault-tolerant architecture, diverse cable routes, geographic separation of disaster recovery sites, and tested runbooks for every failure scenario.
-
-**Compliance**
-Data centres must comply with building codes, electrical standards, fire regulations, environmental legislation, and industry-specific requirements (financial services, healthcare, government). Compliance is verified through third-party audits, certifications, and ongoing internal governance.`,
-        example: `**Example — A Bank's Data Centre:** A major UK bank designed their primary data centre around all six requirements simultaneously. Availability: dual utility feeds, 2N UPS, N+1 generators. Scalability: 40% spare power capacity reserved for growth. Security: ISO 27001 certified, mantrap entry, armed guard post. Efficiency: PUE target of 1.35 with free-cooling economisers. Resilience: a mirrored secondary data centre 40 miles away with synchronous data replication. Compliance: PCI-DSS, FCA regulatory requirements, and BS EN 50600 certification. When a digger accidentally cut their primary fibre route, the resilience design meant trading systems continued without a single dropped transaction.`,
-        keyPoints: [
-          "Availability — continuous uptime measured as a percentage (99.9% to 99.999%)",
-          "Scalability — spare capacity in power, cooling, space, and network for future growth",
-          "Security — physical and cyber security across multiple layers",
-          "Efficiency — PUE measures overhead energy; lower is better (target < 1.5)",
-          "Resilience — fault-tolerant design surviving hardware, power, and environmental failures",
-          "Compliance — regulatory, legal, and contractual obligations must be demonstrated",
-          "All six requirements interact — improving one often affects others",
-        ],
+**Availability** means the facility must remain operational despite equipment failures, planned maintenance, or unexpected events. **Scalability** ensures that as demand grows (more servers, more power), the building can accommodate this without a complete rebuild. **Security** protects both the physical assets and the data within them.`,
+        example: `**Real-World Example:** A bank designs its data centre with 2N power redundancy — meaning every power component is doubled. If the primary UPS fails during a thunderstorm, the secondary automatically takes over in milliseconds. Customers never notice an outage. This "always-on" design is a direct result of the Availability requirement.`,
+        keyPoints: ["Availability — uptime SLA targets", "Scalability — room to grow", "Security — layered protection", "Efficiency — low PUE target", "Resilience — fault tolerance"],
       },
       {
-        title: "Availability & Resilience Measures",
-        content: `**The Uptime Institute Tier System**
-The most widely recognised framework for classifying data centre resilience is the Uptime Institute's Tier Standard. Four tiers are defined, each with increasing requirements for redundancy, concurrent maintainability, and fault tolerance:
+        title: "Availability & Resilience",
+        content: `The Uptime Institute classifies data centres into four Tiers based on their ability to withstand failures without affecting operations:
 
-**Tier I — Basic Capacity (99.671% / ~28.8 hrs downtime/year)**
-Single path for power and cooling. No redundancy. Planned maintenance requires shutting down systems. Appropriate for internal IT workloads where some downtime is acceptable.
+**Tier I** — Basic capacity. Single paths for power and cooling, no redundancy. 99.671% availability (~28 hrs downtime/year).
+**Tier II** — Redundant capacity components. Partial redundancy. 99.741% availability (~22 hrs/year).  
+**Tier III** — Concurrently maintainable. Any component can be serviced without shutting down the IT load. 99.982% (~1.6 hrs/year).  
+**Tier IV** — Fault tolerant. Any single failure won't cause downtime. 99.995% (~26 mins/year).
 
-**Tier II — Redundant Capacity Components (99.741% / ~22 hrs/year)**
-Redundant components (N+1) but still a single distribution path. Some maintenance possible without full shutdown. Suitable for non-critical business applications.
-
-**Tier III — Concurrently Maintainable (99.982% / ~1.6 hrs/year)**
-Multiple active power and cooling distribution paths, though only one is active at a time. Any single component can be maintained or replaced without impacting IT operations. This is the most common tier for enterprise and colocation facilities.
-
-**Tier IV — Fault Tolerant (99.995% / ~26 mins/year)**
-All systems are fully doubled (2N). Any single failure — including a complete path failure — does not affect operations. The active and passive systems are continuously active. Used for mission-critical environments: financial exchanges, national defence, major cloud providers.
-
-**Redundancy Models**
-- **N** — exactly the minimum required (no redundancy)
-- **N+1** — one spare component (e.g., 3 chillers needed, 4 installed)
-- **2N** — complete duplication (e.g., two entirely separate UPS systems)
-- **2(N+1)** — two complete systems, each with one spare (highest resilience)
-
-**Resilience Practices**
-Beyond hardware redundancy, resilience requires: diverse cable routes entering the building from different directions, geographic separation of primary and DR sites, tested failover procedures, documented Emergency Operating Procedures (EOPs), regular disaster recovery exercises, and real-time monitoring with automated alerting.`,
-        example: `**Example — Hospital Data Centre:** A major NHS hospital trust operates a Tier III data centre for their clinical systems (patient records, imaging, pharmacy). During a planned UPS module replacement, engineers isolate the faulty unit while the load transfers seamlessly to the redundant path. Doctors continue accessing patient records, MRI images continue uploading, and the pharmacy dispensing system keeps running — completely unaware that maintenance was happening. This is "concurrent maintainability" in practice. For their most critical resuscitation systems, a separate Tier IV secondary facility 30 miles away maintains a synchronous copy of all data, with sub-second failover capability.`,
-        keyPoints: [
-          "Tier I: single path, no redundancy, ~28 hrs downtime/year acceptable",
-          "Tier II: redundant components (N+1), ~22 hrs/year",
-          "Tier III: concurrently maintainable, multiple paths, ~1.6 hrs/year",
-          "Tier IV: fault tolerant, fully doubled systems, ~26 mins/year",
-          "N, N+1, 2N, 2(N+1) redundancy models for components",
-          "Diverse cable routes, DR sites, and tested runbooks are equally important",
-          "Regular failover testing validates resilience design actually works",
-        ],
+Redundancy is expressed as N (minimum needed), N+1 (one spare), 2N (fully doubled), or 2(N+1) (doubled with spares).`,
+        example: `**Real-World Example:** A hospital's data centre is Tier IV certified. During a maintenance window, engineers replace a faulty UPS module. Because the facility is "concurrently maintainable" and fault-tolerant, the MRI scanner booking system, patient records, and life-support monitoring all remain online throughout — completely unaware that work was happening.`,
+        keyPoints: ["Tier I–IV Uptime Institute rating", "N, N+1, 2N redundancy models", "Concurrent maintainability", "Fault tolerance vs fault resilience", "DR and business continuity planning"],
       },
     ],
   },
   {
-    id: "compliance", icon: "📋", color: "#b45309",
+    id: "compliance",
+    icon: "📋",
     title: "Compliance & Standards",
+    color: "#F0A500",
     topics: [
       {
         title: "Codes, Regulations & National Standards",
-        content: `Data centres operate within a framework of legally binding codes, national standards, and industry regulations. Understanding these is essential for anyone working in or commissioning a data centre.
+        content: `Data centres must comply with a complex web of codes and regulations. In the UK, the primary electrical standard is **BS 7671** (IET Wiring Regulations), which governs how all electrical installations must be designed and certified. Building Regulations Part L addresses energy efficiency.
 
-**BS 7671 — IET Wiring Regulations (UK)**
-The fundamental electrical installation standard for the United Kingdom. All electrical installations in UK data centres must be designed, installed, inspected, and tested in accordance with BS 7671. It covers cable sizing, protective devices, earthing systems, and inspection/test requirements. The 18th Edition (2018, amended 2022) is the current version. An Electrical Installation Condition Report (EICR) provides documented evidence of compliance.
-
-**BS EN 50600 — Data Centre Standard**
-This is the European standard specifically written for data centre facilities and infrastructure. It consists of multiple parts:
-- BS EN 50600-1: General concepts and terminology
-- BS EN 50600-2-1: Building construction
-- BS EN 50600-2-2: Power distribution
-- BS EN 50600-2-3: Environmental control (cooling)
-- BS EN 50600-2-4: Telecommunications cabling
-- BS EN 50600-2-5: Security systems
-- BS EN 50600-3-1: Management and operational information
-
-The standard defines four "Protection Classes" (1–4) broadly aligned with the Uptime Institute Tier system. It provides the technical baseline against which data centre designs are audited and certified.
-
-**Building Regulations and Fire Codes**
-UK Building Regulations (specifically Part B — Fire Safety, Part L — Conservation of Fuel and Power) apply to data centre construction. Fire risk assessments, emergency lighting, fire suppression system design, and means of escape must all comply. The Regulatory Reform (Fire Safety) Order 2005 places legal duties on the "Responsible Person" for fire safety.
-
-**Health & Safety at Work Act 1974 and Associated Regulations**
-The overarching health and safety legal framework. Associated regulations including the Electricity at Work Regulations 1989, Manual Handling Operations Regulations 1992, and Work at Height Regulations 2005 all apply to data centre operations.`,
-        example: `**Example — New Data Centre Build in Manchester:** Before opening a new colocation facility, the operator must obtain Building Regulations approval (demonstrating compliance with Part B and Part L), commission an Electrical Installation Certificate confirming BS 7671 compliance, complete a Fire Risk Assessment under the RRO 2005, and prepare a Health & Safety file. Their insurers require evidence of BS EN 50600 compliance before providing coverage. Their anchor client — a financial services firm — requires all of these documents as part of their due diligence before signing a 5-year contract. Without this compliance documentation, the facility cannot open or attract enterprise clients.`,
-        keyPoints: [
-          "BS 7671 (18th Ed) — mandatory electrical installation standard for all UK work",
-          "BS EN 50600 — the dedicated European data centre standard with 4 Protection Classes",
-          "Building Regulations Part B (fire) and Part L (energy) apply to construction",
-          "RRO 2005 — Responsible Person legally accountable for fire safety",
-          "Health & Safety at Work Act 1974 — overarching legal framework",
-          "Electricity at Work Regulations 1989 — specific electrical safety duties",
-          "Compliance documentation required by insurers, clients, and regulators",
-        ],
+**BS EN 50600** is the European standard specifically for data centre facilities and infrastructure. It covers everything from site location risk assessment to power distribution, cooling, physical security, and management systems. The standard is divided into multiple parts, each addressing a different aspect of the facility.`,
+        example: `**Real-World Example:** A data centre operator in Manchester is building a new facility. Before opening, they must demonstrate compliance with BS EN 50600-2-2 (Power Distribution) to their insurers and clients. An independent auditor reviews their electrical drawings, tests the installation against BS 7671, and issues a certification. Without this, the facility cannot legally operate or attract enterprise clients.`,
+        keyPoints: ["BS 7671 — IET Wiring Regulations (UK)", "BS EN 50600 — DC Infrastructure Standard", "Building Regulations Part L — energy", "Local planning and fire codes", "Health & Safety at Work Act"],
       },
       {
-        title: "International Standards & Industry Guidelines",
-        content: `Beyond UK/European regulations, data centres align with international standards recognised globally, and industry best-practice frameworks that drive operational excellence.
+        title: "International Standards & Certification",
+        content: `Beyond national codes, data centres align with international standards that are recognised globally:
 
-**ISO/IEC 27001 — Information Security Management**
-The international standard for Information Security Management Systems (ISMS). Certification demonstrates that the organisation has implemented systematic processes to protect the confidentiality, integrity, and availability of information. For data centres, this means documented security policies, access control procedures, incident response plans, business continuity arrangements, and regular internal audits. Required by most financial services, government, and healthcare clients.
+**ISO/IEC 27001** — Information Security Management System. Ensures the facility has processes to protect data confidentiality, integrity, and availability. Required by many financial and government clients.
 
-**ISO 14001 — Environmental Management**
-Demonstrates that the organisation manages its environmental impact systematically — energy consumption, water usage (particularly relevant for cooling towers), refrigerant handling, and waste management including WEEE (electronic waste). Increasingly important as clients set their own carbon reduction targets.
+**TIA-942** — Telecommunications Infrastructure Standard for Data Centres. An American standard widely used globally that defines structured cabling, physical layout, redundancy tiers, and equipment zones.
 
-**TIA-942 — Telecommunications Infrastructure Standard**
-An American standard (ANSI/TIA-942-B) widely adopted globally. Defines structured cabling design, physical space organisation (MDA, HDA, EDA zones), and four Rated Data Centre levels aligned with Uptime Institute Tiers. Provides very specific technical prescriptions for cable pathways, separation distances, and redundancy that complement the more principles-based BS EN 50600.
-
-**PCI-DSS — Payment Card Industry Data Security Standard**
-Mandatory for any facility that stores, processes, or transmits payment card data. Prescribes specific technical and operational controls covering network security, access control, encryption, vulnerability management, and monitoring. Enforced by card brands (Visa, Mastercard) with significant financial penalties for non-compliance.
-
-**SOC 2 Type II — Service Organisation Controls**
-An American Institute of CPAs (AICPA) attestation framework covering security, availability, processing integrity, confidentiality, and privacy. Type II examines whether controls operated effectively over a period (typically 12 months) rather than just at a point in time. Widely required by US and global technology clients.
-
-**Uptime Institute Tier Certification**
-A third-party audit and certification programme confirming that a facility genuinely meets the claimed Tier level — not just in design (Design Documents review), but in construction (Constructed Facility review) and ongoing operations (Management & Operations review). The "gold standard" of data centre credibility.`,
-        example: `**Example — Winning a Government Cloud Contract:** A UK cloud provider tendered for a sensitive government contract. The ITT (Invitation to Tender) required: ISO/IEC 27001 certification (demonstrating information security management), Uptime Institute Tier III Certified Operations (demonstrating operational reliability), ISO 14001 certification (demonstrating environmental responsibility), and evidence of compliance with HMG Cyber Essentials Plus. The provider had invested 18 months obtaining these certifications. Their uncertified competitor — technically competent but without the paperwork — was eliminated at the first evaluation stage. The certifications were the proof of trustworthiness that no marketing claim could substitute.`,
-        keyPoints: [
-          "ISO/IEC 27001 — Information Security Management System certification",
-          "ISO 14001 — Environmental Management System certification",
-          "TIA-942 — American DC infrastructure standard, globally adopted",
-          "PCI-DSS — mandatory for payment card data environments",
-          "SOC 2 Type II — 12-month operational controls attestation",
-          "Uptime Institute Tier Certification — design, construction, and operations audit",
-          "Green Grid metrics (PUE, WUE, CUE) provide industry benchmarking",
-        ],
+**Uptime Institute Tier Certification** — A third-party audit and certification confirming the facility genuinely meets its claimed Tier level in design, construction, and operations.`,
+        example: `**Real-World Example:** A cloud provider wants to win a UK government contract. The contract requires ISO 27001 certification and Uptime Institute Tier III Certification. The provider commissions a 6-month audit programme. Auditors review security policies, physical access logs, change management records, and conduct a site visit. Upon certification, the provider wins the contract — the standards are the proof of trust.`,
+        keyPoints: ["ISO/IEC 27001 — Information Security", "ISO 14001 — Environmental Management", "TIA-942 — DC Telecommunications Standard", "PCI-DSS — Payment card data environments", "SOC 2 Type II — Controls attestation"],
       },
     ],
   },
   {
-    id: "infrastructure", icon: "⚡", color: "#15803d",
+    id: "infrastructure",
+    icon: "⚡",
     title: "The Physical Infrastructure",
+    color: "#22C55E",
     topics: [
       {
         title: "The Four Key Environments",
-        content: `Every data centre is built around four interdependent environments. Understanding them individually and as a system is fundamental to working effectively in any data centre.
+        content: `Every data centre is built around four interdependent environments that must work in harmony:
 
-**Power — The Energy Supply Chain**
-Electrical power flows from the utility grid through a carefully engineered chain of components — transformer, switchboard, UPS, PDU — to every server in every rack. The power environment must be reliable (no interruptions), clean (no voltage fluctuations or harmonics), and efficient (minimal conversion losses). It must also be redundant: every critical component has a backup, and every server has two independent power feeds.
+**Power** — The electrical supply chain from the utility grid through transformers, UPS systems, generators, and PDUs to individual server power sockets. Without reliable power, nothing works.
 
-**Cooling — The Thermal Management System**
-Servers convert nearly 100% of their electrical consumption into heat. A 10MW IT load produces 10MW of heat — equivalent to around 2,400 domestic homes. This heat must be continuously removed or equipment will overheat, throttle performance, and fail. The cooling environment spans room-level air conditioning, chilled water distribution, containment systems, and increasingly, direct liquid cooling for high-density deployments.
+**Cooling** — The thermal management systems that remove heat generated by IT equipment. Servers convert virtually all electrical energy into heat; this must be expelled or equipment will overheat and fail.
 
-**IT — The Computing Environment**
-The servers, storage arrays, and network equipment that actually perform computation and data management. This is the productive environment that justifies everything else. It includes the physical hardware, the operating systems and virtualisation layers, the application software, and the data itself. The IT environment is what clients are actually paying for.
+**IT** — The servers, storage arrays, networking equipment, and software that actually process and store data. This is the "productive" environment that justifies everything else.
 
-**Space — The Physical Environment**
-The building structure, raised floors, overhead cable management, cabinets, and aisles that organise everything. Space is divided into "white space" (the computer room housing IT equipment) and "grey space" (plant rooms housing M&E infrastructure). Physical security controls, cable containment, and the relationship between these areas define the spatial environment.
-
-**Interdependency**
-Critically, these four environments are deeply interdependent. Add more IT equipment (IT environment) and you immediately require more power (power environment), more cooling (cooling environment), and more rack space and cable capacity (space environment). Change the cooling strategy and it affects power consumption and space utilisation. A failure in any one environment can cascade to affect all others.`,
-        example: `**Example — Adding a New AI GPU Cluster:** A cloud provider installs 20 new GPU servers for AI training workloads. Each server draws 10kW — 200kW total. This requires: Power environment: new PDU branch circuits, verification of UPS headroom, generator load recalculation. Cooling environment: dedicated rear-door heat exchangers or liquid cooling manifolds because 200kW cannot be air-cooled in a standard aisle. Space environment: structural floor loading check (GPU servers are heavy), new cable trays for power and data, updated rack elevation drawings. IT environment: network configuration, storage allocation, operating system deployment. All four environments change simultaneously for a single infrastructure addition.`,
-        keyPoints: [
-          "Power: utility → transformer → UPS → PDU → server — redundant at every stage",
-          "Cooling: removes 100% of IT heat load — critical for equipment longevity",
-          "IT: servers, storage, networking — the productive environment clients pay for",
-          "Space: white space (IT) and grey space (M&E plant) — distinct and controlled",
-          "All four are interdependent — a change in one affects all others",
-          "Design must balance all four environments simultaneously",
-          "Capacity planning must consider all four environments in parallel",
-        ],
+**Space** — The physical building, cabinets, cable infrastructure, and separation between white space (IT equipment) and grey space (mechanical and electrical plant).`,
+        example: `**Real-World Example:** Imagine building a data centre like a hospital. Power = the building's electrical system (must never fail). Cooling = air conditioning (patients/servers need stable temperature). IT = the medical equipment (the actual reason the building exists). Space = the layout of wards and operating theatres (organisation and access control). Change any one environment and it affects all the others.`,
+        keyPoints: ["Power — electrical supply chain", "Cooling — thermal management", "IT — computing equipment", "Space — white vs grey space", "All four are interdependent"],
       },
       {
         title: "Power Infrastructure",
-        content: `The electrical distribution system in a data centre follows a precisely engineered sequence designed to ensure that no single failure interrupts the power supply to IT equipment.
+        content: `The electrical distribution path in a data centre follows a carefully engineered sequence to ensure that if any single component fails, the load continues uninterrupted:
 
-**The Distribution Path**
-Utility supply → HV/MV transformer → Main LV Switchboard (MLVS) → UPS systems → Static Transfer Switch (STS) → Floor-level PDUs → Rack PDUs (in-cabinet) → Server dual PSUs
+**Utility supply → HV/MV Transformer → Main LV Switchboard (MLVS) → UPS Systems → Static Transfer Switch (STS) → Power Distribution Units (PDUs) → Rack PDUs → Server power supplies**
 
-**Utility Supply and Transformation**
-Most large data centres receive high-voltage (HV) supply — typically 11kV or 33kV in the UK — and transform it down to low voltage (400V three-phase) through on-site transformers. Redundant utility feeds from different grid substations, entering the building from different directions, provide the first level of resilience.
+**UPS (Uninterruptible Power Supply)** systems use batteries to provide instant power if the mains supply fails, typically bridging the 10–15 seconds it takes for diesel generators to start and reach full speed. Generators provide long-term backup power and must be tested regularly under load to confirm reliability.
 
-**UPS Systems**
-The UPS (Uninterruptible Power Supply) is the critical bridge between utility power and IT equipment. Modern data centres use double-conversion UPS systems that continuously convert incoming AC power to DC and back to AC — isolating IT equipment from any power quality issues on the utility. Batteries provide ride-through during the 10–15 seconds it takes diesel generators to start. Typical battery autonomy is 5–15 minutes at full load.
-
-**Static Transfer Switch (STS)**
-The STS monitors two independent power sources simultaneously and can transfer the connected load from one to the other in under 4 milliseconds — faster than any IT equipment can detect. Every critical load should be fed through an STS with A and B feeds.
-
-**Power Distribution Units (PDUs)**
-Floor-level PDUs step down voltage and distribute power to rack PDUs through a ring or radial circuit arrangement. Intelligent PDUs (iPDUs) monitor power consumption at the outlet level, enabling granular energy management and capacity planning.
-
-**A and B Feeds**
-Every server has two power supply units (PSUs). PSU-A connects to the A-power path; PSU-B connects to the B-power path. These paths are completely independent — separate UPS, separate PDU, separate cable route. If the entire A-path fails, servers continue running on B without interruption.`,
-        example: `**Example — The 2025 Storm Éowyn Power Outage:** During Storm Éowyn in January 2025, a major data centre in Ireland lost mains utility power when overhead lines failed. The sequence was: T+0s: utility power lost, UPS batteries take over seamlessly — no IT impact. T+2s: ATS (Automatic Transfer Switch) detects power failure, sends start signal to generators. T+12s: all three diesel generators reach synchronous speed and are connected to the busbars. T+14s: generator load accepted, UPS batteries resume charging. The entire event from grid loss to generator supply took 14 seconds. Servers and network equipment never knew anything had happened. The facility ran on generator power for 6 hours until grid supply was restored.`,
-        keyPoints: [
-          "Full path: Utility → Transformer → MLVS → UPS → STS → PDU → Rack PDU → Server",
-          "Double-conversion UPS isolates IT from power quality issues",
-          "Battery autonomy: 5–15 minutes to bridge generator start delay",
-          "STS transfers between A and B feeds in under 4 milliseconds",
-          "A and B feeds are completely independent paths to every server",
-          "iPDUs enable outlet-level power monitoring and capacity management",
-          "Generator sizing must cover full IT load plus cooling and auxiliary systems",
-        ],
+**A and B power feeds** ensure every server has two independent power paths — if the A-feed PDU fails, the server's second PSU switches to the B-feed automatically.`,
+        example: `**Real-World Example:** During Storm Éowyn in January 2025, a data centre in Ireland lost mains power for 4 hours. The UPS batteries provided seamless bridging for 12 seconds until the diesel generators started. The generators ran on fuel stored on-site, and the facility called their fuel supplier for a priority delivery. Clients experienced zero downtime — they didn't even know there was a grid outage.`,
+        keyPoints: ["Utility → Transformer → MLVS → UPS → PDU path", "UPS bridges generator start delay", "A & B redundant feed to every server", "Generators tested monthly under load", "iPDU metering at outlet level"],
       },
       {
         title: "Cooling Infrastructure",
-        content: `Cooling is typically the largest single component of a data centre's energy overhead. Understanding cooling architecture is essential for both operational staff and those planning infrastructure changes.
+        content: `Data centre cooling must remove heat from IT equipment as efficiently as possible. The main approaches are:
 
-**Why Cooling Is Critical**
-Every watt consumed by IT equipment is converted to heat. A modest 1MW IT load generates heat equivalent to approximately 240 domestic kettles running continuously. This heat must be removed to maintain server inlet temperatures within ASHRAE-defined limits (18–27°C for class A2 equipment). Exceeding these temperatures causes thermal throttling, reduced component lifespan, and ultimately, hardware failure.
+**CRAC/CRAH Units** — Computer Room Air Conditioning/Handlers placed around the room perimeter or between aisles. Cold air is distributed under a raised floor through perforated tiles.
 
-**CRAC and CRAH Units**
-Computer Room Air Conditioning (CRAC) units use direct expansion refrigerant circuits to cool air. Computer Room Air Handlers (CRAH) use chilled water coils. CRAH units are more energy-efficient at scale and allow the refrigeration plant (chillers) to be located outside the data hall. Both types circulate cooled air under the raised floor (where fitted) or over the heads of cabinets, returning warm exhaust air through return plenums.
+**Hot-Aisle/Cold-Aisle Containment** — Racks are arranged back-to-back (hot aisle) and front-to-front (cold aisle). Containment curtains or ceilings prevent hot and cold air mixing, dramatically improving efficiency.
 
-**Hot-Aisle/Cold-Aisle Containment**
-The most impactful efficiency improvement for air-cooled data centres. Racks are arranged back-to-back (forming hot aisles) and front-to-front (forming cold aisles). Containment systems — physical curtains, doors, or ceilings — prevent hot exhaust air from mixing with cold supply air. HAC (Hot Aisle Containment) encloses the hot aisle and directs exhaust to return plenums. CAC (Cold Aisle Containment) encloses the cold aisle and pressurises it with cold supply air.
+**In-Row Cooling (IRC)** — Cooling units placed between racks deliver cold air directly to equipment, eliminating the need to cool the entire room.
 
-**In-Row Cooling (IRC)**
-Cooling units installed between racks deliver conditioned air directly to the cold aisle of adjacent equipment. Removes heat at the source with minimal mixing. Well-suited for medium-high density rows (15–30kW per rack).
-
-**Direct Liquid Cooling (DLC)**
-Cold plates are attached directly to CPUs, GPUs, and memory modules. Chilled water or dielectric fluid circulates through these cold plates, absorbing heat directly from the silicon. Dramatically more efficient than air cooling, enabling rack densities of 50–150kW+. Increasingly standard for AI and HPC workloads.
-
-**Immersion Cooling**
-Servers are submerged in tanks of dielectric fluid. Single-phase uses mineral oil or engineered synthetic fluids. Two-phase uses a fluid with a very low boiling point — it boils off hot components, condenses on a cooling coil, and drips back down, creating a continuous cooling cycle without pumps. Extremely energy-efficient but operationally demanding.`,
-        example: `**Example — Retrofitting a Legacy Data Centre:** A data centre built in 2008 had perimeter CRAC units with no containment, achieving a PUE of 1.95 — nearly doubling its energy bill through cooling inefficiency. The operator retrofitted hot-aisle containment (sealing the tops and ends of hot aisles with acryllic panels), raised the cold aisle set-point from 18°C to 23°C, and replaced ageing CRAC units with modern CRAH units connected to a new chilled water plant with free-cooling capability. The result: PUE dropped from 1.95 to 1.38. At 2MW IT load, this saved approximately £680,000 per year in electricity costs and reduced CO₂ emissions by over 1,500 tonnes annually — purely through operational improvements with no change to IT equipment.`,
-        keyPoints: [
-          "Every watt of IT load generates one watt of heat that must be removed",
-          "ASHRAE A2 class: server inlet temperature 18–27°C",
-          "CRAH units (chilled water) more efficient than CRAC (direct expansion) at scale",
-          "Hot-aisle/cold-aisle containment prevents air mixing — biggest efficiency gain",
-          "In-row cooling for 15–30kW/rack; liquid cooling essential above 30kW/rack",
-          "Immersion cooling: highest efficiency, used for extreme AI/HPC density",
-          "PUE improves dramatically with containment and set-point optimisation",
-        ],
+**Liquid Cooling** — For very high-density AI/GPU servers, water is circulated through cold plates attached directly to CPUs and GPUs. Immersion cooling submerges servers in dielectric fluid.`,
+        example: `**Real-World Example:** A data centre running traditional perimeter cooling had a PUE of 1.8 — meaning for every 1W of IT load, 0.8W was wasted on cooling. After retrofitting hot-aisle containment and raising the cold aisle setpoint from 18°C to 24°C, the PUE dropped to 1.35 — saving over £200,000/year in electricity costs with no new equipment purchased.`,
+        keyPoints: ["CRAC/CRAH perimeter cooling", "Hot-aisle/cold-aisle containment (HAC/CAC)", "In-row cooling for high density", "Liquid and immersion cooling for AI workloads", "Economiser/free-cooling reduces compressor hours"],
       },
       {
         title: "IT Connectivity & Networks",
-        content: `The IT connectivity layer encompasses everything from physical cabling through to the logical network architecture that connects servers to each other and to the outside world.
+        content: `The IT environment encompasses the entire computing stack and the networks that connect it:
 
-**Data Centre Network Topologies**
-The traditional **three-tier architecture** (core → aggregation → access) was designed for north-south traffic (client to server). Modern virtualised and cloud workloads generate predominantly east-west traffic (server to server) — virtual machines migrating, storage synchronising, microservices communicating. This drove adoption of the **leaf-spine topology**: every leaf switch (connecting servers) has a direct uplink to every spine switch (no inter-spine traffic). This creates a predictable, low-latency, high-bandwidth fabric where any server can reach any other server in two hops. 100Gbps and 400Gbps leaf-spine networks are now standard in hyperscale facilities.
+**Data Centre Networks** typically use a **leaf-spine topology** — every server rack (leaf) connects directly to a spine switch layer. This creates a flat, low-latency, high-bandwidth fabric ideal for east-west traffic (server-to-server, common in cloud and virtualised environments). Traditional three-tier (core/aggregation/access) architectures are still found in legacy environments.
 
-**Structured Cabling**
-TIA-942 and BS EN 50600-2-4 define a zoned approach to data centre cabling:
-- **MDA (Main Distribution Area):** Core network equipment, main cross-connect
-- **HDA (Horizontal Distribution Area):** Zone-level distribution switches
-- **EDA (Equipment Distribution Area):** The rack and its connections
-- **ZDA (Zone Distribution Area):** Optional intermediate zone for flexible patching
+**Structured Cabling** follows standards (TIA-942, EN 50600-2-4) with defined zones: MDA (Main Distribution Area), HDA (Horizontal Distribution Area), and EDA (Equipment Distribution Area). Fibre optic cabling dominates — multimode for short runs within the data centre, single-mode for longer distances between facilities.
 
-Within the data hall, **multimode fibre** (OM3/OM4/OM5) is used for high-speed connections up to ~300m. **Single-mode fibre** is used for longer runs between buildings or between data centres. **Pre-terminated MPO trunk cables** are the standard approach — factory-made, tested, labelled assemblies that can be installed in minutes and provide guaranteed performance.
-
-**Servers and Virtualisation**
-Physical servers are 1U, 2U, or 4U rack-mount units, or blade servers in chassis. Most enterprise environments run hypervisors (VMware vSphere, Microsoft Hyper-V, open-source KVM) creating dozens of Virtual Machines (VMs) on each physical host. Container platforms (Kubernetes, Docker) allow even higher density. AI workloads use GPU servers (NVIDIA H100, H200) that can consume 10–15kW each.
-
-**Storage**
-SAN (Storage Area Network) uses Fibre Channel or iSCSI to present block storage to servers. NAS (Network Attached Storage) provides file-level access over Ethernet. All-flash NVMe arrays deliver sub-millisecond latency for performance-critical workloads. Object storage (S3-compatible) provides vast, scalable capacity for unstructured data.`,
-        example: `**Example — Financial Trading Network:** A financial trading firm requires ultra-low latency between their trading application servers and their market data feed processors. They use a leaf-spine network with 100Gbps links, single-mode pre-terminated fibre (pre-measured and factory-tested to eliminate connector losses), and co-locate their servers in the same rack as the exchange's matching engine where permitted. They use RDMA (Remote Direct Memory Access) over Converged Ethernet to further reduce latency. The difference between 5 microseconds and 15 microseconds in order execution can mean millions of pounds in annual trading profit or loss — the network infrastructure is directly connected to business value.`,
-        keyPoints: [
-          "Leaf-spine topology: every server reachable in 2 hops, scales linearly",
-          "Three-tier (core/aggregation/access) still found in legacy environments",
-          "MDA → HDA → EDA cabling zones per TIA-942 / BS EN 50600-2-4",
-          "Multimode fibre (OM4/OM5) for intra-DC; single-mode for long distance",
-          "Pre-terminated MPO trunks: fast deployment, guaranteed performance",
-          "Hypervisors (VMware, Hyper-V, KVM) create many VMs per physical server",
-          "SAN (block), NAS (file), and object storage serve different workload types",
-        ],
-      },
-      {
-        title: "Space: White Space, Grey Space & Physical Security",
-        content: `The spatial organisation of a data centre is not simply about fitting equipment in — it is a carefully designed system that balances operational efficiency, safety, security, and future flexibility.
-
-**White Space**
-The computer hall or data hall — the room where IT equipment is installed. Named "white space" because early data centres typically had white raised floors and white-painted walls. White space is characterised by: controlled temperature and humidity, raised floor or overhead cable management, arranged rows of cabinets, and strict access control. The density of equipment in white space (kW per square metre) is a key metric for measuring how effectively the space is being used.
-
-**Grey Space**
-All supporting mechanical and electrical (M&E) infrastructure spaces: UPS rooms, generator halls, battery rooms, LV switchroom, transformer bays, chiller plant rooms, cooling tower areas, pump rooms, and the building management system control room. Grey space contains equipment that is high-voltage, high-temperature, or otherwise hazardous — access is typically restricted to trained engineers. The term "grey space" reflects the industrial, unpainted nature of these plant areas.
-
-**Meet-Me Room (MMR)**
-The demarcation point where external network carriers (BT, Virgin, Zayo, etc.) connect to the data centre's internal network infrastructure. A highly secure area where cross-connects between different carriers and customers are made. Also sometimes called a carrier hotel or PoP (Point of Presence).
-
-**Physical Security**
-Security operates in concentric rings, each requiring separate authorisation:
-1. **Site perimeter:** Fencing, vehicle barriers (hostile vehicle mitigation), CCTV, security lighting
-2. **Building access:** Reception, manned security desk, visitor management, NDA requirements
-3. **Data hall access:** Card + PIN + biometric (fingerprint, iris, or hand geometry), mantrap/airlock
-4. **Cage/cabinet access:** Individual padlocks or electronic cabinet locks for colocation customers
-5. **Monitoring:** 24/7 SOC (Security Operations Centre), 90-day+ CCTV retention, motion analytics
-
-Cable containment — cable trays, ladder racks, conduits, and cable management arms within cabinets — is a safety and operational requirement. Poorly managed cables obstruct airflow, create trip hazards, slow maintenance, and introduce fire risk.`,
-        example: `**Example — Colocation Cage Access Incident:** A junior engineer at a colocation data centre attempted to access a customer's cage without completing the visitor sign-in process. The mantrap detected an anomaly (two people attempting to enter on one badge scan) and locked down. The Security Operations Centre reviewed CCTV footage and contacted the customer. The customer confirmed they had not authorised any visit. The access attempt was investigated as a potential security incident. Result: the engineer received retraining; the customer was issued a formal security incident report (as required by their ISO 27001 obligations); and CCTV footage was preserved for 90 days as evidence. Physical security isn't bureaucracy — it's the last line of defence against data theft.`,
-        keyPoints: [
-          "White space: computer hall with IT equipment, controlled environment, strict access",
-          "Grey space: M&E plant rooms — UPS, generators, chillers, switchgear",
-          "MMR (Meet-Me Room): carrier demarcation point, highly secure cross-connect area",
-          "Security in concentric rings: perimeter → building → data hall → cage → cabinet",
-          "Mantrap/airlock prevents tailgating into sensitive areas",
-          "24/7 SOC monitors CCTV, access control, and environmental alarms",
-          "Cable containment is both a safety requirement and an airflow management tool",
-        ],
+**Servers and Storage** include physical servers (1U rack-mount to blade chassis), virtualised environments (VMware, Hyper-V), containerised workloads, SAN (Storage Area Network), NAS (Network Attached Storage), and all-flash arrays.`,
+        example: `**Real-World Example:** A financial trading firm uses a leaf-spine network in their data centre with 100Gbps uplinks. Every microsecond matters in trading. Their structured cabling uses single-mode pre-terminated fibre MPO trunks that take minutes to install rather than hours — minimising the risk of human error and downtime during any change to the network.`,
+        keyPoints: ["Leaf-spine topology for east-west traffic", "Structured cabling zones: MDA, HDA, EDA", "Fibre: multimode (short) & single-mode (long)", "SAN, NAS, and object storage", "1U rack servers to blade chassis"],
       },
     ],
   },
   {
-    id: "working", icon: "👷", color: "#b91c1c",
+    id: "working",
+    icon: "👷",
     title: "Working in the Data Centre",
+    color: "#EF4444",
     topics: [
       {
         title: "Safety Considerations",
-        content: `Data centres contain multiple categories of hazard that require structured safety management. Working safely is not optional — it is a legal duty under the Health & Safety at Work Act 1974 and associated regulations.
+        content: `Data centres contain numerous hazards: high-voltage electrical systems, chemical fire suppression gases, heavy equipment, manual handling risks, and working in confined spaces. Safe working is non-negotiable.
 
-**Hazard Categories**
-- **Electrical:** High-voltage switchgear, UPS systems (which store significant energy in batteries), PDUs, and cabling. Electrical faults can cause electrocution, arc flash, and fire.
-- **Manual handling:** Servers (1U servers: 8–30kg), UPS battery modules (up to 50kg), cable reels, and rack cabinets (fully loaded: 300–1,000kg) present significant manual handling risks.
-- **Working at height:** Installing overhead cable trays, working on raised platforms around cooling equipment, and using mobile elevated work platforms (MEWPs).
-- **Chemical hazards:** Battery electrolyte (sulphuric acid in VRLA batteries), refrigerant gases (HFCs, CO₂, ammonia), and cooling tower biocides.
-- **Thermal/environmental:** Hot aisles can exceed 45°C. Cold storage data centres may require cold-weather PPE. Poor airflow in enclosed grey space areas can cause heat stress.
-- **Gaseous suppression:** FM-200, Novec 1230, and inert gas (IG-541) suppression systems displace oxygen or interfere with combustion. Accidental discharge in an occupied space can be life-threatening.
+**Risk Assessment & Method Statements (RAMS)** must be completed before any non-routine work. The risk assessment identifies hazards and controls; the method statement describes step-by-step how the work will be done safely. Both documents must be reviewed and signed off before work begins.
 
-**Risk Assessment and Method Statements (RAMS)**
-Before any non-routine work, a risk assessment must be completed identifying: the hazards present, who could be harmed, existing controls, additional controls required, and residual risk. The method statement describes the specific step-by-step method by which the work will be safely executed. Both documents must be reviewed and signed by all personnel conducting the work.
+**Permit to Work (PTW)** is a formal safety management system for high-risk tasks — electrical isolation, hot work, working at height, confined space entry. The PTW ensures the right people authorise the work, the right controls are in place, and the facility is returned to a safe state afterwards.
 
-**Personal Protective Equipment (PPE)**
-Common PPE in data centres includes:
-- ESD (Electrostatic Discharge) wrist straps and antistatic footwear — protecting sensitive IT equipment from static discharge
-- Arc flash suits (rated in cal/cm²) — required for work near live LV/HV conductors
-- Safety boots (steel toe, anti-static) — mandatory in grey space and construction areas
-- Hi-visibility vest — for areas with forklift or vehicle movements
-- Hard hat — during construction phases or overhead work
-- Insulated gloves — for electrical isolation work`,
-        example: `**Example — Replacing a Live UPS Module:** An engineer needs to replace a faulty UPS battery module in a live system. The safe process: (1) Complete RAMS — identify battery acid, electrical energy, and manual handling hazards; controls include: acid-resistant gloves, eye protection, insulated tools, team lift for heavy modules. (2) Obtain PTW — Authorised Person reviews the RAMS, confirms the redundant UPS path is carrying load, and signs the PTW. (3) Don PPE — insulated gloves, safety glasses, antistatic strap. (4) Follow method statement step by step. (5) Return PTW — confirm work complete, system tested, area safe. The whole safety process takes longer than the 20-minute physical job, but protects both the engineer and the live systems.`,
-        keyPoints: [
-          "H&SW Act 1974 and EaWR 1989 place legal duties on both employers and employees",
-          "RAMS required before all non-routine tasks — not optional",
-          "Arc flash PPE rated in cal/cm² based on incident energy calculation",
-          "ESD protection mandatory when handling IT equipment",
-          "Gaseous suppression discharge can be life-threatening — evacuation procedures critical",
-          "Manual handling assessments required for heavy servers and battery modules",
-          "COSHH assessments for battery acid, refrigerants, and biocide chemicals",
-        ],
+**Life Safety Systems** include VESDA (Very Early Smoke Detection Apparatus) which detects smoke particles before visible smoke appears, and gaseous suppression systems (FM-200, Novec 1230, inert gas) that extinguish fires without damaging equipment or leaving residue.`,
+        example: `**Real-World Example:** An engineer needs to replace a faulty PDU busbar in a live data centre. Before touching anything, they complete a RAMS, obtain a PTW from the Authorised Person (AP), carry out a Lockout/Tagout (LOTO) isolation procedure, use a two-pole voltage indicator to prove the circuit is dead, and only then proceed — wearing arc flash PPE rated to the calculated incident energy. This process takes longer than the actual work, but a mistake could be fatal.`,
+        keyPoints: ["RAMS completed before non-routine work", "Permit to Work (PTW) for high-risk tasks", "LOTO — Lockout/Tagout isolation procedure", "VESDA early smoke detection", "FM-200/Novec gaseous suppression"],
       },
       {
-        title: "Life Safety Systems & Fire Protection",
-        content: `Data centres require highly specialised fire detection and suppression systems that protect both personnel and irreplaceable IT equipment.
+        title: "MACs, Asset Management & Change Control",
+        content: `**MACs (Moves, Adds and Changes)** are the day-to-day operational activities that modify the data centre configuration — installing a new server, relocating equipment to a different rack, adding a network cable. Each MAC must follow a formal change management process to avoid introducing errors.
 
-**VESDA — Very Early Smoke Detection Apparatus**
-VESDA systems continuously sample air through a network of pipes connected to an aspirating smoke detector. Air is drawn through a laser detection chamber, which can identify smoke particles at concentrations as low as 0.005% obscuration per metre — long before visible smoke forms. This provides minutes of warning compared to seconds from conventional smoke detectors, allowing investigation and potentially stopping a fire before suppression is triggered. VESDA is the industry standard for data centre white spaces.
+**Change Management** (typically ITIL-aligned) requires: a change request, impact assessment, peer review, approval from a Change Advisory Board (CAB) for significant changes, a rollback plan, and post-implementation review. This prevents well-intentioned changes from accidentally causing outages.
 
-**Fire Suppression Systems**
-Unlike conventional office buildings, water sprinklers are generally not used in data halls (water destroys IT equipment). Instead:
-
-**FM-200 (HFC-227ea):** A colourless gas that suppresses fire by absorbing heat from the combustion reaction. Effective at low concentrations (~7%), safe for occupied spaces at design concentration, and leaves no residue. Being phased out in Europe due to high global warming potential (GWP of 3,220).
-
-**Novec 1230 (FK-5-1-12):** A fluorinated ketone with very low GWP (1.0 vs FM-200's 3,220). Similar performance to FM-200, atmospheric lifetime of only 5 days. Now the preferred alternative to FM-200 in new installations.
-
-**Inert Gas Systems (IG-541, IG-55, IG-100):** Mixtures of nitrogen, argon, and CO₂ that reduce oxygen concentration to below the level that supports combustion (~14%) while remaining safe for humans (~12% minimum). No residue, zero GWP, but require large cylinder banks due to lower density.
-
-**Pre-Action Systems:** Two-event activation (smoke detection AND heat detection) required before water is released — preventing accidental discharge from a single detector fault. Used in mixed spaces where some water-tolerant equipment is present.
-
-**Emergency Power Off (EPO)**
-A large red mushroom-head button that simultaneously removes power from all IT equipment in the data hall. Only used in genuine emergencies. Pressing EPO without authorisation causes catastrophic downtime and is treated as a serious incident. EPO buttons have protective covers to prevent accidental activation.`,
-        example: `**Example — VESDA Early Warning Save:** At 02:30, a VESDA system in a London colocation data centre detected smoke at 0.008% obscuration — well below the level that would trigger a conventional smoke detector. The BMS alarmed. The on-call engineer investigated and found a failing power supply in a customer server — its capacitors were beginning to overheat and off-gas. The engineer followed the customer's runbook, gracefully powered off the server, removed it from the rack, and placed it in the fire-safe quarantine area. No suppression was triggered. The customer's application failed over to a standby server in another region. If the fault had been detected by a conventional spot detector, the server would likely have caught fire before the alarm triggered — potentially activating suppression and causing collateral damage to adjacent equipment.`,
-        keyPoints: [
-          "VESDA detects smoke at 0.005% obscuration — minutes before conventional detectors",
-          "Water sprinklers not used in data halls — gaseous suppression protects equipment",
-          "FM-200: effective but high GWP (3,220) — being replaced in new builds",
-          "Novec 1230: near-zero GWP (1.0), preferred replacement for FM-200",
-          "Inert gas: zero GWP, large cylinder banks required, safe for personnel",
-          "Pre-action systems prevent accidental discharge — two-event activation",
-          "EPO removes all IT power — only for genuine emergencies, highly destructive",
-        ],
-      },
-      {
-        title: "MACs, Change Management & Asset Management",
-        content: `The controlled management of changes and assets is what separates a professionally operated data centre from one that experiences frequent self-inflicted outages.
-
-**MACs — Moves, Adds and Changes**
-The operational term for the day-to-day physical and logical changes made to data centre infrastructure:
-- **Move:** Relocating equipment from one position to another
-- **Add:** Installing new equipment, adding a new cable, provisioning a new service
-- **Change:** Modifying existing equipment configuration, replacing a component, re-patching a cable
-
-Every MAC, however small, must be managed through the change control process. An uncontrolled patch cable re-route has caused major outages at global companies. A "simple" server replacement that bypasses the correct process can result in the wrong machine being decommissioned.
-
-**Change Management Process (ITIL-aligned)**
-1. **Change Request:** Submitted via ITSM tool (ServiceNow, Jira, Remedy) — describes the change, its purpose, scope, and proposed implementation time
-2. **Impact Assessment:** Who/what is affected? What is the risk? What dependencies exist?
-3. **Peer Review:** Technical review by a colleague to identify issues the requestor may have missed
-4. **CAB (Change Advisory Board):** Weekly or bi-weekly meeting where significant changes are reviewed and approved or deferred. Emergency changes follow a fast-track ECAB (Emergency CAB) process.
-5. **Implementation:** Work carried out exactly as described in the change record, during the approved window
-6. **Post-Implementation Review:** Confirm success. Raise an incident if something went wrong. Update the change record.
-7. **Rollback:** Every change must have a documented rollback plan executed within the agreed window if issues arise.
-
-**Asset Management and DCIM**
-DCIM (Data Centre Infrastructure Management) platforms integrate asset tracking, capacity management, environmental monitoring, and power management. An accurate asset register records every device: make, model, serial number, firmware version, rack location (cabinet, rack unit position), power consumption, connected ports, and associated services. Rack elevation drawings must reflect current reality — not what was planned six months ago.
-
-**Decommissioning**
-Removing equipment requires: removing it from the asset register, secure data erasure (NIST SP 800-88 guidelines — overwrite, purge, or physically destroy storage media), environmentally compliant disposal under WEEE regulations, and updating all documentation. Improper decommissioning of storage media has led to major data breaches.`,
-        example: `**Example — The Uncontrolled Change That Caused a Global Outage:** In October 2021, Meta (Facebook) suffered a nearly 6-hour global outage affecting Facebook, Instagram, and WhatsApp. The cause was a configuration change — a routine BGP update — that accidentally removed Meta's border routers from the global routing table, making it impossible for anyone (including Meta's own engineers) to reach their infrastructure remotely. The change had not been properly reviewed or tested. The rollback plan could not be executed remotely because the remote access systems were also offline. Engineers had to physically travel to data centres with access cards to manually restore configuration. An estimated $100 million in revenue was lost. The root cause was a change management failure.`,
-        keyPoints: [
-          "Every MAC — however small — must go through change management",
-          "Change process: Request → Impact Assessment → Review → CAB → Implement → PIR",
-          "Rollback plan mandatory for every change, executable within agreed window",
-          "DCIM provides real-time asset, capacity, power, and environmental visibility",
-          "Rack elevation drawings and asset register must reflect current reality",
-          "Decommissioning: NIST SP 800-88 data erasure, WEEE compliant disposal",
-          "Emergency CAB (ECAB) process for urgent unplanned changes",
-        ],
+**Asset Management** tracks every physical item in the data centre — make, model, serial number, rack location, power draw, network ports, and associated services. DCIM (Data Centre Infrastructure Management) platforms provide real-time dashboards showing power capacity, cooling headroom, and space utilisation.`,
+        example: `**Real-World Example:** An engineer submits a change request to add 4 new servers. The change management process identifies that this will consume 8kW of power — but the target rack's PDU is already at 85% capacity. The change is paused, the server is re-homed to a different rack with headroom, and the DCIM asset register is updated. Without this process, an uncontrolled add could have tripped the PDU's overcurrent protection, taking down an entire cabinet of customer servers.`,
+        keyPoints: ["MACs — Moves, Adds and Changes", "Change request → CAB approval process", "DCIM for real-time asset tracking", "Rack elevation drawings kept current", "Decommissioning includes secure data erasure"],
       },
     ],
   },
   {
-    id: "maintenance", icon: "🔧", color: "#6d28d9",
+    id: "maintenance",
+    icon: "🔧",
     title: "Data Centre Maintenance",
+    color: "#8B5CF6",
     topics: [
       {
         title: "Maintenance Strategies",
-        content: `Maintenance in a data centre is not a cost — it is an investment in availability. Deferred maintenance is a primary cause of unplanned outages. Understanding the four main maintenance strategies helps operators choose the right approach for each system.
+        content: `Data centre maintenance is not optional — it is essential to preserving availability and equipment lifespan. There are four primary strategies:
 
-**Preventative Maintenance (PPM — Planned Preventative Maintenance)**
-Work carried out at fixed intervals regardless of the current condition of the equipment. Intervals are typically set by manufacturers (e.g., annual UPS service, quarterly CRAC filter change) and refined through operational experience. PPM is predictable, plannable, and enables spare parts to be pre-ordered. A PPM planner or CAFM (Computer-Aided Facilities Management) system schedules all tasks, tracks completion, and maintains service records. Limitation: you may service equipment that doesn't need it (cost) or miss a developing fault between scheduled visits (risk).
+**Preventative Maintenance (PPM)** — Scheduled servicing at fixed intervals regardless of equipment condition. Examples: annual UPS battery tests, quarterly CRAC filter changes, 6-monthly generator oil changes. Planned, predictable, cost-certain.
 
-**Predictive Maintenance (PdM)**
-Uses condition monitoring data to predict when equipment is approaching failure, enabling intervention before failure occurs. Technologies include: infrared thermography (detecting electrical hot spots), vibration analysis (detecting bearing wear in cooling fans and pumps), oil and coolant sampling (detecting generator engine wear), ultrasonic testing (detecting partial discharge in HV equipment), and power quality analysis (detecting harmonic distortion). PdM reduces unnecessary maintenance and identifies failures before they occur. Requires investment in monitoring technology and skilled data analysis.
+**Predictive Maintenance** — Uses data from sensors, thermal imaging, oil analysis, and vibration monitoring to predict when equipment is likely to fail. Maintenance is only performed when the data indicates it is needed, reducing unnecessary interventions.
 
-**Reliability Centred Maintenance (RCM)**
-A structured, evidence-based methodology that asks seven questions about each asset: What does it do? What can go wrong? What happens when it fails? Does it matter? Can we detect the failure developing? What can we do to prevent it? What if we can't prevent it? RCM determines the optimal mix of PPM, PdM, and run-to-failure (for non-critical equipment) for each component. Used for new facilities or major refreshes to establish a defensible, cost-optimal maintenance programme.
+**Reliability Centred Maintenance (RCM)** — A structured methodology that analyses the function of each asset, its failure modes, and the consequences of failure to determine the most appropriate maintenance strategy for each item.
 
-**Condition-Based Maintenance (CBM)**
-Maintenance is performed only when real-time condition indicators exceed predefined thresholds. A temperature sensor on a chiller compressor approaching its maximum operating limit triggers a maintenance alert. A power quality monitor detecting rising harmonic distortion triggers a capacitor bank inspection. CBM minimises unnecessary maintenance but requires dense sensor networks, reliable data acquisition, and defined threshold values based on engineering knowledge.`,
-        example: `**Example — Catching a Generator Failure Before It Happens:** A data centre's predictive maintenance programme includes quarterly engine oil analysis from all diesel generators. A laboratory analysis of samples from Generator 2 detects elevated levels of iron and copper particles — indicators of accelerated bearing wear in the engine. The PPM schedule would not have triggered a full engine inspection for another 6 months. The predictive data allows engineers to schedule an engine strip and bearing replacement during the next planned maintenance window, with a replacement generator hired to cover the period. Cost: £25,000. Alternative — bearing failure during a real power outage: potentially catastrophic downtime, emergency repair cost £80,000+, reputational damage, and possible SLA penalties.`,
-        keyPoints: [
-          "PPM: fixed intervals, predictable, plannable — manufacturer-defined schedules",
-          "PdM: condition monitoring data predicts failures before they occur",
-          "RCM: structured methodology determining optimal strategy per asset",
-          "CBM: threshold-triggered, minimises unnecessary work, requires dense sensing",
-          "Infrared thermography every 6 months is standard PPM for LV switchgear",
-          "Oil/coolant analysis for generators detects internal wear before failure",
-          "CAFM system tracks all PPM tasks, completions, and next-due dates",
-        ],
-      },
-      {
-        title: "Power, Cooling & IT Connectivity Maintenance",
-        content: `Each of the four data centre environments has specific maintenance requirements that must be understood by operational staff.
-
-**Power System Maintenance**
-UPS systems: Annual manufacturer service (capacitor checks, fan replacement, firmware updates, battery impedance testing). Battery replacement: VRLA (sealed lead-acid) batteries have a design life of 5–10 years but should be tested annually and replaced based on impedance test results rather than age alone. Generator maintenance: Engine oil and filter change (annually or by run hours), coolant check, fuel quality testing (diesel degrades — biocide additive required for stored fuel), air filter replacement, and monthly no-load starts. Most importantly: annual full-load bank test to confirm the generator can sustain rated output for a minimum of 2 hours.
-
-LV switchgear: Semi-annual infrared thermography scan of all connections — loose connections develop hot spots visible on thermal camera long before they arc-fault. Torque checks on busbar connections to manufacturer specification. Contactor and relay testing. Circuit breaker operation tests.
-
-**Cooling System Maintenance**
-CRAC/CRAH units: Monthly filter inspection and replacement schedule (filters clog and reduce airflow efficiency dramatically), coil cleaning (annual for DX units, semi-annual for CW units), refrigerant leak checks (legal requirement under F-Gas regulations), condensate tray cleaning, EC fan motor inspection and greasing.
-
-Chiller plant: Full service annually by OEM-approved engineer, tube bundle cleaning (removes scale that reduces heat transfer efficiency), refrigerant charge verification, compressor oil analysis, control system calibration.
-
-Cooling towers: The highest-risk maintenance area. Legionella bacteria breed in warm water between 20–45°C. The HSE Approved Code of Practice L8 requires: a written scheme of control, a Responsible Person (RP), regular water sampling and analysis (monthly minimum), biocide dosing (continuous or shock), blowdown to control dissolved solids, and physical cleaning (draining and disinfecting the tower annually). Failure to comply with L8 can result in criminal prosecution.
-
-**IT Connectivity Maintenance**
-Fibre patch panels: Annual cleaning of all connectors using appropriate IEC 61300-3-35 graded cleaning tools. Contaminated fibre connectors are the leading cause of unexplained optical performance issues. Cable management audit: checking tie wraps, labelling, bend radius compliance, and accessibility. SFP/QSFP transceiver inventory: DOM (Digital Optical Monitoring) data from transceivers provides predictive indicators of approaching failure.`,
-        example: `**Example — The £2M Cooling Tower Legionella Incident:** A data centre operator deferred their cooling tower cleaning (normally annual) during the COVID period due to access restrictions. When sampling resumed, Legionella bacteria counts exceeded the action threshold (>1,000 cfu/L). The health authority was notified (legal requirement). The tower was immediately isolated, treated with hyperchlorination, and physically cleaned. The operator had to hire temporary dry coolers while the tower was offline. Total direct cost: £180,000. Three nearby office workers subsequently reported Legionella-type pneumonia symptoms — a formal investigation found a link to the contaminated tower. The regulator issued a formal improvement notice and the operator faced civil litigation. Cooling tower maintenance is not just about operational efficiency — it is a public health and legal obligation.`,
-        keyPoints: [
-          "UPS batteries: test annually by impedance, replace on results not calendar age",
-          "Generators: annual full load bank test for minimum 2 hours at rated capacity",
-          "LV switchgear: 6-monthly IR thermography to detect hot spots before arc-faults",
-          "CRAC/CRAH filters: check monthly, replace on schedule — blocked filters cut airflow",
-          "Cooling towers: L8 compliance is a legal duty — monthly sampling, biocide dosing",
-          "Fibre connectors: clean annually with certified tools — contamination causes unexplained faults",
-          "All maintenance records must be retained for audit and insurance purposes",
-        ],
+**Condition-Based Maintenance (CBM)** — Triggered by real-time condition indicators crossing a threshold: e.g., a generator coolant temperature sensor reading high triggers an inspection rather than waiting for the scheduled quarterly visit.`,
+        example: `**Real-World Example:** A data centre uses infrared thermography on its LV switchgear every 6 months (PPM). During one scan, the thermal camera reveals a "hot spot" on a busbar connection — 42°C above surrounding temperature. This is a predictive indicator of a loose connection that could arc-fault and cause a fire. The fault is rectified during the next planned maintenance window, preventing a potentially catastrophic failure.`,
+        keyPoints: ["PPM — scheduled at fixed intervals", "Predictive — data-driven condition monitoring", "RCM — failure mode analysis framework", "CBM — threshold-triggered maintenance", "Infrared thermography for electrical systems"],
       },
     ],
   },
   {
-    id: "power", icon: "🔌", color: "#0e7490",
+    id: "power",
+    icon: "🔌",
     title: "Data Centre Power Infrastructure",
+    color: "#06B6D4",
     topics: [
       {
         title: "Electrical Safety",
-        content: `Electrical safety in data centres is governed by specific legislation and requires a formal management system. The consequences of electrical accidents include death, serious injury, equipment damage, data loss, and criminal prosecution.
+        content: `Electrical safety in data centres is governed by strict rules and legal requirements. The main framework in the UK is the **Electricity at Work Regulations 1989**, which requires that all electrical systems are constructed, maintained, and used safely. Compliance is a legal duty.
 
-**Legal Framework**
-The **Electricity at Work Regulations 1989 (EaWR)** is the primary UK legislation placing absolute duties on employers, self-employed persons, and employees to prevent danger from electrical systems. Regulation 4 requires all electrical systems to be constructed and maintained to prevent danger. Regulation 16 requires work on or near live conductors only where it is unreasonable to work dead, adequate precautions are in place, and persons are suitable to do the work.
+Key safety practices:
+**Authorised Person (AP) / Competent Person** — Only trained and authorised individuals may perform electrical work or issue Permits to Work. The AP is responsible for the safety of the electrical system.
 
-**Duty Holders — Authorised Person (AP) and Competent Person (CP)**
-A formal electrical safety management system designates:
-- **Authorised Person (AP):** A technically competent individual with formal written authorisation from senior management to issue and receive back Permits to Work for electrical systems within a defined scope. The AP is personally responsible for the safety of the electrical system during PTW operations.
-- **Competent Person (CP):** A technically qualified individual authorised to carry out specific types of electrical work under PTW control.
+**Lockout/Tagout (LOTO)** — A physical process of isolating equipment from its energy source (locking open a breaker, removing fuses) and attaching a tag confirming who has isolated it. This prevents accidental re-energisation.
 
-**Safe Isolation Procedure**
-The sequence for working safely on electrical equipment: Identify the circuit → Isolate using appropriate means (MCCB, switch, HRC fuse removal) → Secure isolation (lock off, apply personal lock) → Prove isolation using an approved voltage indicator → Test the voltage indicator on a known live source before and after use (GS38 compliant probes) → Apply Caution Notices → Proceed with work.
-
-**Arc Flash**
-When a fault causes a low-impedance path in an electrical system, an arc discharge can develop. Arc temperatures reach 20,000°C — hotter than the surface of the sun. The explosive pressure wave, UV radiation, molten metal droplets, and blast can be fatal at distances up to several metres. Arc flash risk assessment (per IEC 62271 or NFPA 70E) calculates the Incident Energy at the working distance, which determines the minimum PPE Arc Rating (cal/cm²) required.`,
-        example: `**Example — Arc Flash Incident Prevention:** During a routine switchgear inspection at a data centre, an engineer noticed unusual discolouration and pitting on a 400A busbar connection. An arc flash risk assessment was performed — the calculated incident energy at 500mm working distance was 18 cal/cm². The engineer donned an arc flash suit rated to 40 cal/cm², face shield, insulated Class 0 gloves, and arc-rated boots. The faulty connection was identified as having a torque of only 12Nm against the specified 35Nm — it had never been correctly tightened during installation. The connection was de-energised under PTW, re-torqued, and the busbar temperature normalised on the next thermal imaging scan. Had this been found during an actual arc fault, the incident energy at 500mm would have caused severe burns through PPE rated below 18 cal/cm².`,
-        keyPoints: [
-          "EaWR 1989: legal duty to prevent danger from electrical systems",
-          "AP issues and receives back Permits to Work — personally responsible for safety",
-          "Safe isolation: Identify → Isolate → Secure → Prove → Test → Caution → Work",
-          "GS38 approved voltage indicator with test before and after proving dead",
-          "Arc flash: temperatures to 20,000°C — PPE rated in cal/cm² per incident energy",
-          "LOTO: physical locks prevent re-energisation while work is in progress",
-          "Working on live conductors requires specific authorisation and justification",
-        ],
+**Arc Flash** — When a fault causes an electrical arc, temperatures can reach 20,000°C — hotter than the surface of the sun. Arc flash risk assessment determines the Personal Protective Equipment (PPE) required for work near live conductors.`,
+        example: `**Real-World Example:** An engineer is replacing a faulty meter in a live LV panel. The arc flash risk assessment calculates the Incident Energy as 12 cal/cm². The engineer must wear an arc flash suit rated to at least 12 cal/cm², face shield, insulated gloves, and safety boots. Working on a live panel without this PPE is a disciplinary offence and a criminal liability under the Health & Safety at Work Act.`,
+        keyPoints: ["Electricity at Work Regulations 1989", "Authorised Person (AP) role", "LOTO — physical isolation procedure", "Arc flash risk assessment and PPE", "Safe isolation: isolate, test, prove dead"],
       },
       {
-        title: "Backup Power, Earthing & Metrics",
-        content: `Understanding backup power systems, earthing principles, and efficiency metrics is fundamental to operating and maintaining data centre power infrastructure.
+        title: "Backup Power & Earthing",
+        content: `**Diesel Generators** are the backbone of backup power in most data centres. A typical 1500rpm diesel genset can start and reach full rated output within 10–15 seconds. They are sized to carry the full IT load plus cooling systems, with N+1 or 2N configurations providing redundancy.
 
-**Diesel Generator Systems**
-Diesel generators are the primary backup power source for most data centres. Key characteristics:
-- **Start and accept load:** 10–15 seconds for a 1500rpm diesel genset
-- **Sizing:** Must handle full IT load + cooling + UPS auxiliary systems + lighting/security. Typically 110–125% of maximum expected load to provide headroom.
-- **Redundancy:** N+1 minimum; 2N for Tier IV. Multiple smaller generators are preferred over one large unit for maintenance flexibility.
-- **Fuel:** Diesel stored on-site in day tanks (immediate supply) and bulk tanks (24–72 hours minimum). Fuel quality is critical — stored diesel degrades and can grow microbial contamination. Regular testing and biocide treatment required. Priority re-supply agreements with fuel suppliers ensure continuity during prolonged outages.
-- **Testing:** Monthly no-load start (15 minutes). Annual load bank test at 100% rated output for minimum 2 hours with all data recorded.
+**Battery Energy Storage Systems (BESS)** are an emerging alternative or complement to traditional generators, particularly for carbon reduction. BESS can respond in milliseconds — faster than UPS batteries — and can be charged from renewable energy.
 
-**Battery Energy Storage Systems (BESS)**
-Lithium-ion based BESS provides an alternative or complement to generators. Advantages: millisecond response (faster than UPS+generators), silent operation, no emissions, potential to charge from renewable energy. Limitations: high capital cost, limited energy capacity (minutes to hours rather than days), thermal management requirements (fire risk if not properly managed).
+**Earthing and Bonding** ensures all metallic structures are electrically connected to earth (ground). This protects personnel from electric shock and ensures fault currents flow safely to earth rather than through people. **TN-S earthing** (separate neutral and protective earth conductors) is standard in UK data centres. **Surge Protection Devices (SPDs)** protect sensitive IT equipment from voltage spikes caused by lightning or switching events.
 
-**Earthing and Bonding**
-All metallic structures in a data centre must be electrically bonded to a common earth. The **TN-S earthing system** (Separate Neutral and Protective Earth conductors from the supply transformer) is standard in UK data centres. This provides:
-- Personal protection: fault currents flow safely to earth rather than through personnel
-- Equipment protection: eliminates potential differences between connected equipment
-- EMC performance: clean reference earth for sensitive IT equipment
-
-**Surge Protection Devices (SPDs)** at each level of the distribution (main switchboard, PDU, rack PDU) protect against voltage transients from lightning strikes and switching operations.
-
-**Key Metrics**
-- **PUE (Power Usage Effectiveness):** Total Facility Energy ÷ IT Equipment Energy. Best-in-class: <1.2. Good: 1.2–1.5. Average: 1.5–2.0. Poor: >2.0
-- **DCiE (Data Centre infrastructure Efficiency):** 1/PUE × 100% — percentage of total energy reaching IT equipment
-- **WUE (Water Usage Effectiveness):** Annual water used ÷ IT energy — measures cooling water consumption
-- **CUE (Carbon Usage Effectiveness):** CO₂ equivalent emissions ÷ IT energy — measures carbon intensity`,
-        example: `**Example — Google's PUE Performance:** Google's data centres consistently report a trailing twelve-month average PUE of approximately 1.10. This means 91% of all energy consumed by the facility reaches IT equipment as productive computing — only 9% is overhead. This is achieved through: double-conversion UPS at 97%+ efficiency, chilled water temperature optimised at 17°C supply (vs industry standard 7–12°C), extensive use of outside air economisation, waste heat recovery for building heating in some locations, and AI-driven cooling optimisation (DeepMind's algorithms reduced cooling energy by 40% in trials). At Google's scale (tens of gigawatts globally), each 0.01 PUE improvement represents millions of dollars in annual savings and thousands of tonnes of CO₂ reduction.`,
-        keyPoints: [
-          "Generators: 10–15 sec start, sized at 110–125% of maximum load",
-          "Fuel testing and biocide treatment essential for stored diesel quality",
-          "Annual 100% load bank test for minimum 2 hours — mandatory record keeping",
-          "BESS: millisecond response, no emissions, limited capacity — complements generators",
-          "TN-S: Separate Neutral and PE conductors — standard UK data centre earthing",
-          "SPDs at every distribution level protect against lightning and switching transients",
-          "PUE = Total Facility ÷ IT Energy. Target < 1.5, best practice < 1.2",
-        ],
+**PUE (Power Usage Effectiveness) = Total Facility Energy ÷ IT Equipment Energy.** A PUE of 1.0 is theoretical perfection; the industry average is ~1.5; best-in-class facilities achieve below 1.2.`,
+        example: `**Real-World Example:** Google's data centres report a trailing twelve-month average PUE of 1.10 — meaning only 10% of their energy goes to overhead (cooling, lighting, power conversion losses). This is achieved through advanced cooling design, high-efficiency UPS systems, and software that dynamically manages server power states. At their scale, each 0.01 improvement in PUE saves millions of pounds annually.`,
+        keyPoints: ["Generators: 10–15 sec start time, sized to full load", "BESS: millisecond response, carbon reduction", "TN-S earthing: separate N and PE conductors", "SPDs protect from lightning and switching surges", "PUE = Total Facility ÷ IT Energy (target < 1.5)"],
       },
     ],
   },
   {
-    id: "cooling", icon: "❄️", color: "#0369a1",
+    id: "cooling",
+    icon: "❄️",
     title: "Data Centre Cooling Infrastructure",
+    color: "#0EA5E9",
     topics: [
       {
-        title: "Cooling Architectures & Economiser Modes",
-        content: `Cooling is typically 30–40% of a data centre's total energy consumption. Understanding the full range of cooling architectures and their efficiency characteristics is essential for both operations and capacity planning.
+        title: "Cooling Architectures & Economisers",
+        content: `**Air-Side Economiser** — When outdoor air temperature and humidity are suitable, outside air is drawn directly into the data centre to cool IT equipment, bypassing refrigeration compressors entirely. In the UK, this is viable for several thousand hours per year given the temperate climate.
 
-**Why Cooling Cannot Be Compromised**
-ASHRAE (American Society of Heating, Refrigerating and Air-Conditioning Engineers) defines equipment classes and their allowable operating ranges. Class A2 (the most common server class) allows inlet temperatures of 10–35°C. However, most operators target 18–27°C to maintain headroom and extend equipment life. Above 35°C, CPUs and GPUs thermal-throttle (reduce clock speed to protect themselves). Above 45°C, hardware failures accelerate dramatically. Humidity extremes cause either condensation (too humid) or electrostatic discharge (too dry) — ASHRAE recommends 8–80% RH with a dew point of 5.5–15°C.
+**Water-Side Economiser (Free Cooling)** — A cooling tower or dry cooler pre-cools chilled water to the required supply temperature without running refrigeration compressors. As outside temperature drops, more cooling can be provided "for free." 
 
-**Room-Level Air Cooling — CRAC and CRAH**
-Perimeter or in-row CRAC (Computer Room Air Conditioning) units use direct expansion (DX) refrigerant circuits. CRAH (Computer Room Air Handler) units use chilled water coils fed from a central chiller plant. CRAH units are more energy-efficient at scale and allow the refrigeration plant to be located outside the data hall.
+**Indirect Evaporative Cooling** — Outside air passes heat through an exchanger cooled by evaporative effect — the cooling benefit is captured without mixing outside air with the data centre environment. Popular in Google's and Microsoft's recent facilities.
 
-Raised floor distribution: cold air is supplied under the raised floor through perforated tiles at controlled flow rates. Overhead return: warm air rises and returns to CRAC/CRAH units through ceiling return plenums. Hot-aisle containment (HAC) prevents warm exhaust mixing with supply air — the single most effective retrofit improvement available.
-
-**Air-Side Economiser (Free Cooling)**
-When outdoor air temperature and humidity fall within acceptable limits, outside air can be drawn directly into the data centre as cooling medium, completely bypassing refrigeration. Control dampers modulate between 100% recirculation, partial economisation, and 100% outside air modes. In the UK's temperate climate, air-side economisation is viable for approximately 3,000–5,000 hours per year, potentially eliminating compressor operation for 35–57% of the year. Filtration (including HEPA for locations near industrial zones) is essential to protect IT equipment from particulates.
-
-**Water-Side Economiser (Adiabatic/Evaporative Free Cooling)**
-Cooling towers or dry coolers pre-cool chilled water without running refrigeration compressors. At low ambient temperatures, the cooling tower alone can deliver chilled water at the required supply temperature. As ambient temperature rises, chillers provide "top-up" cooling to achieve the setpoint. This is the most common free-cooling approach for large chilled water plants. Variable speed drives on cooling tower fans and chiller condenser fans optimise energy at varying ambient conditions.
-
-**Indirect Evaporative Cooling**
-Outside air passes through a heat exchanger — water is evaporated on one side, cooling the airstream on the other side without mixing outside and inside air. Used extensively by major cloud providers (Google, Microsoft) for its high efficiency while maintaining indoor air quality. Particularly effective in dry climates but less so in humid environments.`,
-        example: `**Example — Microsoft's Scottish Data Centre Economisation:** Microsoft's data centre near Edinburgh, Scotland runs air-side economisation for approximately 4,800 hours per year — over half the year — using Scotland's cool, relatively clean Atlantic climate. During these hours, refrigeration compressors are completely off. Energy monitoring shows cooling energy during economisation periods is less than 5% of compressor-on cooling energy. Combined with a PUE target of 1.125 for the facility, this delivers both significant cost savings and substantial carbon reduction compared to a comparable facility in southern Europe. Microsoft reports this location as one of their most energy-efficient globally.`,
-        keyPoints: [
-          "ASHRAE A2: server inlet 10–35°C, target 18–27°C for headroom and longevity",
-          "CRAH (chilled water) more efficient than CRAC (DX) at scale",
-          "HAC retrofit: single biggest efficiency improvement for air-cooled rooms",
-          "Air-side economisation: 3,000–5,000 hrs/yr viable in UK climate",
-          "Water-side economisation: most common approach for large chilled water plants",
-          "Indirect evaporative cooling: benefits without mixing inside/outside air",
-          "Variable speed drives on fans and pumps dramatically cut part-load energy",
-        ],
+**Chilled Water Plant** — For large facilities, chillers (using centrifugal or screw compressors) produce chilled water typically at 7–12°C supply, 12–18°C return. The chilled water circuit runs to CRAH units or in-row coolers. N+1 or 2N chiller redundancy is standard for critical facilities.`,
+        example: `**Real-World Example:** A data centre in Edinburgh runs air-side economisation for approximately 4,200 hours per year — nearly half the year — because Scotland's climate rarely exceeds the upper acceptable temperature limit of ~27°C. During these hours, the refrigeration compressors are off completely. This saves approximately 40% of annual cooling energy compared to a facility in a warmer climate that cannot economise as frequently.`,
+        keyPoints: ["Air-side economiser: direct outside air cooling", "Water-side economiser: cooling tower free-cooling", "UK climate enables 3,000–5,000 hrs/yr free cooling", "Chilled water: 7–12°C supply, 12–18°C return", "Variable speed drives cut pump/fan energy at part load"],
       },
       {
-        title: "Liquid Cooling, Chilled Water Plant & PUE",
-        content: `The growth of AI workloads is driving a fundamental shift in data centre cooling towards liquid-based approaches. Understanding both traditional chilled water plant design and emerging liquid cooling technologies is increasingly essential.
+        title: "Liquid Cooling & PUE",
+        content: `As AI and GPU workloads push rack densities beyond 50–100kW, traditional air cooling reaches its physical limits. **Direct Liquid Cooling (DLC)** circulates chilled water or dielectric fluid through cold plates mounted directly on CPUs and GPUs. Heat is removed at the source — far more efficiently than air.
 
-**Chilled Water Plant**
-Large data centres use centralised chilled water plants rather than individual DX units. Components:
-- **Chillers:** Centrifugal (large capacity, best efficiency at full load), screw (medium, better part-load efficiency), or scroll (small, simple) compressor types. Rated by cooling capacity in kW or tons of refrigeration. COP (Coefficient of Performance) = cooling output ÷ compressor electrical input.
-- **Cooling towers:** Reject condenser heat to atmosphere through evaporation. Evaporative approach means heat is rejected at wet-bulb temperature rather than dry-bulb — much more efficient in hot weather.
-- **Dry coolers/adiabatic coolers:** No water evaporation — reject heat by convection. Zero Legionella risk but less efficient than towers in hot weather.
-- **Buffer tanks:** Store thermal energy (chilled water) to smooth out rapid load changes and extend generator autonomy without running chillers.
-- **Pumping systems:** Primary/secondary pump circuit separation. Variable speed drives (VSDs) cut pump energy by up to 60% at part load (affinity law: pump power ∝ speed³).
+**Immersion Cooling** submerges entire servers in tanks of dielectric fluid (a liquid that doesn't conduct electricity). Single-phase immersion uses mineral oil or synthetic fluid that absorbs heat and is pumped to a heat exchanger. Two-phase immersion uses a fluid with a very low boiling point — it boils off the hot components, condenses on a cooling coil above, and drips back down. Extremely energy efficient but operationally complex.
 
-**Direct Liquid Cooling (DLC)**
-Manifolds within server racks distribute chilled water (typically 18–45°C supply temperature — much warmer than standard chilled water) to cold plates on CPUs, GPUs, and memory. The warmer supply temperature enables more free-cooling hours and higher chiller efficiency. Heat is captured as warm return water, potentially for heat reuse (district heating, space heating). DLC is standard in NVIDIA's AI-optimised server architectures. Rack densities of 50–200kW are achievable.
-
-**Single-Phase Immersion Cooling**
-Complete servers are submerged in tanks filled with dielectric fluid (mineral oil, engineered synthetic, or natural esters). No fans required. Heat is absorbed by the fluid, which is pumped to a heat exchanger. PUE approaches 1.03–1.05. Capital cost is high, and maintenance requires extracting servers from fluid — messy and operationally complex. Operator adoption growing for HPC and cryptocurrency mining facilities.
-
-**Two-Phase Immersion Cooling**
-Uses a dielectric fluid with a very low boiling point (~49°C). Servers submerge in the liquid. CPU/GPU heat boils the fluid to vapour, which rises and condenses on a cold coil above the liquid surface, dripping back down. Creates a closed evaporation-condensation cycle without pumps. Extremely energy efficient — PUE approaching 1.02. Fluorinated fluids used (PFAS environmental concerns are being addressed through alternative fluid development).
-
-**PUE Optimisation Strategies**
-Raise chilled water supply temperature: +1°C ≈ 3–5% chiller energy saving. Raise cold aisle setpoint from 18°C to 24°C: extends economiser hours significantly. Increase delta-T (temperature difference between supply and return chilled water) from 6°C to 10°C+: reduces pumping energy and chiller staging. Deploy VSDs on all fans and pumps. Commission AI/ML-based cooling optimisation (Google, Deepmind approach). Eliminate cold aisle/hot aisle bypass (blanking panels, aisle containment).`,
-        example: `**Example — Meta's AI Data Centre Cooling:** Meta's data centres for AI training workloads (running thousands of NVIDIA H100 GPUs) use direct liquid cooling as standard. Each H100 GPU consumes 700W. A rack of 8 servers with 8 GPUs each = 56kW of GPU heat alone. Air cooling this is physically impossible in standard rack spacing. DLC captures 70–80% of server heat as warm water (45°C return). This warm water is used for campus space heating in winter, eliminating a separate heating system. The residual heat is rejected via dry coolers. The facility's cooling PUE contribution is approximately 1.03 — compared to 1.25–1.40 for an equivalent air-cooled facility. At Meta's scale, this represents hundreds of megawatts of cooling savings annually.`,
-        keyPoints: [
-          "Chilled water plant: chillers + cooling towers + buffer tanks + pumping systems",
-          "Centrifugal chillers: best full-load efficiency; screw: better part-load",
-          "Cooling tower rejects heat at wet-bulb temperature — more efficient in heat",
-          "DLC: cold plates at 18–45°C supply, enables waste heat recovery",
-          "Single-phase immersion: PUE 1.03–1.05, mineral oil or synthetic fluid",
-          "Two-phase immersion: PUE ~1.02, boiling/condensation cycle, no pumps",
-          "Every +1°C chilled water supply temp ≈ 3–5% chiller energy saving",
-        ],
+**PUE and Cooling Efficiency** are directly linked. Raising the chilled water supply temperature from 7°C to 18°C improves chiller COP (Coefficient of Performance) by approximately 3–5% per degree — a 5°C rise delivers roughly 15% chiller energy saving. Raising the cold aisle target temperature from 18°C to 24°C extends economiser hours significantly in temperate climates.`,
+        example: `**Real-World Example:** Microsoft's underwater Project Natick data centre submerged servers in a sealed tube on the seabed off the Orkney Islands. The cold seawater provided natural cooling with no mechanical refrigeration. The trial reported a server failure rate 8x lower than land-based data centres — attributed to the inert nitrogen atmosphere and absence of humidity and corrosion. While not commercially deployed at scale, it demonstrated the potential of extreme liquid cooling approaches.`,
+        keyPoints: ["DLC: cold plates on CPUs/GPUs, removes heat at source", "Single-phase immersion: mineral/synthetic oil tanks", "Two-phase immersion: boiling dielectric, highest efficiency", "Raising chilled water temp 1°C ≈ 3–5% chiller energy saving", "ASHRAE A2 class: allows server inlet up to 35°C"],
       },
     ],
   },
 ];
-// ─── QUIZ DATA ─────────────────────────────────────────────────────────────────
+
+// ─── QUIZ QUESTIONS ────────────────────────────────────────────────────────────
 
 const QUIZ_QUESTIONS = {
   fundamentals: [
-    { q: "What does Tier IV classification guarantee above Tier III?", options: ["Higher cooling efficiency", "Fault tolerance — a single failure won't cause downtime", "Cheaper construction cost", "Faster internal network speeds"], answer: 1, explanation: "Tier IV is fault tolerant — any single component or path failure will not cause downtime. Tier III is only concurrently maintainable (work can happen without shutdown) but a failure could still cause an outage." },
-    { q: "What does 2N redundancy mean?", options: ["Two components sharing one load", "Every critical component is completely duplicated", "Two generators for N servers", "Double the cooling capacity only"], answer: 1, explanation: "2N means every critical component is fully doubled — two complete independent systems. If one entire system fails, the second carries the full load without impact." },
-    { q: "Approximately how many hours of downtime per year does Tier III allow?", options: ["28.8 hours", "22 hours", "1.6 hours", "26 minutes"], answer: 2, explanation: "Tier III guarantees 99.982% availability, equating to approximately 1.6 hours of allowable downtime per year. Tier I allows ~28.8 hours and Tier IV only ~26 minutes." },
-    { q: "Which of the six fundamental design requirements specifically addresses growing demand?", options: ["Availability", "Scalability", "Resilience", "Compliance"], answer: 1, explanation: "Scalability addresses the requirement to grow power, cooling, space, and network capacity as business demand increases — without a complete rebuild of the facility." },
-    { q: "What is the key difference between a colocation facility and an enterprise data centre?", options: ["Colocation uses liquid cooling; enterprise uses air cooling", "Multiple businesses rent space in colocation; enterprise is owned and used by one organisation", "Colocation is always Tier IV; enterprise is Tier II", "Enterprise data centres are larger"], answer: 1, explanation: "In a colocation facility, multiple businesses rent rack space, cages, or suites. An enterprise data centre is owned and operated by a single organisation for their own IT workloads." },
+    { q: "What does Tier IV classification guarantee above Tier III?", options: ["Higher cooling efficiency", "Fault tolerance — single failures don't cause downtime", "Cheaper construction", "Faster network speeds"], answer: 1, explanation: "Tier IV is fault tolerant, meaning any single component failure will not cause downtime. Tier III is concurrently maintainable but not fault tolerant." },
+    { q: "What does 2N redundancy mean?", options: ["Two components working together", "Every critical component is fully doubled", "Two generators for N servers", "Double the cooling capacity only"], answer: 1, explanation: "2N means every critical component is completely duplicated — if one entire system fails, the second takes the full load." },
+    { q: "Approximately how many hours of downtime per year does Tier III allow?", options: ["28 hours", "22 hours", "1.6 hours", "26 minutes"], answer: 2, explanation: "Tier III guarantees 99.982% availability, equating to approximately 1.6 hours of downtime per year." },
+    { q: "What is the primary purpose of a data centre?", options: ["To generate electricity for IT equipment", "To house, process, and store data and IT infrastructure", "To provide office space for IT staff", "To manufacture computer hardware"], answer: 1, explanation: "A data centre is a dedicated facility for housing IT computing equipment, network infrastructure, and storage systems." },
+    { q: "Which organisation created the Tier Classification system?", options: ["ISO", "TIA", "Uptime Institute", "IEEE"], answer: 2, explanation: "The Tier I–IV classification system was created and is certified by the Uptime Institute." },
   ],
   compliance: [
-    { q: "Which standard specifically covers data centre facilities and infrastructure in Europe?", options: ["BS 7671", "BS EN 50600", "ISO 27001", "TIA-942"], answer: 1, explanation: "BS EN 50600 is the European standard written specifically for data centre facilities and infrastructure. It covers power distribution, cooling, cabling, security, and management systems." },
-    { q: "What does ISO/IEC 27001 certify?", options: ["Physical building construction quality", "Information Security Management System", "Cooling system efficiency targets", "Network cabling installation standards"], answer: 1, explanation: "ISO/IEC 27001 certifies that an organisation has implemented an effective Information Security Management System (ISMS) — systematic processes protecting data confidentiality, integrity, and availability." },
-    { q: "TIA-942 is primarily used for which aspect of data centres?", options: ["Fire safety procedures", "Telecommunications infrastructure standards and cabling zones", "Renewable energy compliance", "Staff training and competency requirements"], answer: 1, explanation: "TIA-942 is the Telecommunications Infrastructure Standard for Data Centres, defining structured cabling zones (MDA, HDA, EDA), physical layout, and four Rated Data Centre levels." },
-    { q: "Which compliance standard is mandatory for environments handling payment card data?", options: ["ISO 14001", "SOC 2 Type II", "PCI-DSS", "BS EN 50600-2-5"], answer: 2, explanation: "PCI-DSS (Payment Card Industry Data Security Standard) is mandatory for any environment that stores, processes, or transmits payment card data, enforced by Visa, Mastercard, and other card brands." },
-    { q: "What does SOC 2 Type II attest to, compared to Type I?", options: ["Type II covers a larger geographic area", "Type II examines whether controls operated effectively over a period of time (typically 12 months), not just at a point in time", "Type II requires physical site inspection; Type I is documentation only", "Type II includes cyber security; Type I is physical security only"], answer: 1, explanation: "SOC 2 Type I is a point-in-time assessment of control design. Type II examines whether the controls actually operated effectively over a sustained period (usually 12 months) — a much stronger attestation." },
+    { q: "Which standard specifically covers data centre facilities and infrastructure in Europe?", options: ["BS 7671", "BS EN 50600", "ISO 27001", "TIA-942"], answer: 1, explanation: "BS EN 50600 is the European standard specifically for data centre facilities and infrastructure, covering power, cooling, security, and management." },
+    { q: "What does ISO/IEC 27001 certify?", options: ["Physical building construction", "Information Security Management System", "Cooling system efficiency", "Network cabling standards"], answer: 1, explanation: "ISO/IEC 27001 certifies that an organisation has an effective Information Security Management System (ISMS) protecting data confidentiality, integrity, and availability." },
+    { q: "TIA-942 is primarily used for which aspect of data centres?", options: ["Fire safety procedures", "Telecommunications infrastructure standards", "Renewable energy compliance", "Staff training requirements"], answer: 1, explanation: "TIA-942 is the Telecommunications Infrastructure Standard for Data Centres, covering structured cabling, physical layout, redundancy tiers, and equipment zones." },
+    { q: "Which compliance standard is specifically required for environments handling payment card data?", options: ["ISO 14001", "SOC 2 Type II", "PCI-DSS", "BS EN 50600"], answer: 2, explanation: "PCI-DSS (Payment Card Industry Data Security Standard) is required for any environment that stores, processes, or transmits payment card data." },
+    { q: "What does BS 7671 govern?", options: ["Data centre cooling systems", "Electrical wiring installations in the UK", "Physical security systems", "Environmental management"], answer: 1, explanation: "BS 7671, known as the IET Wiring Regulations, is the UK standard governing how all electrical installations must be designed, installed, and verified." },
   ],
   infrastructure: [
-    { q: "In a hot-aisle/cold-aisle arrangement, how are server racks positioned?", options: ["All racks face the same direction", "Racks alternate front-to-front (cold aisle) and back-to-back (hot aisle)", "Racks are arranged in a circle around cooling units", "Racks face inward toward a central cooling column"], answer: 1, explanation: "In HAC/CAC layout, racks alternate: front-to-front (intakes facing each other) forming cold aisles receiving supply air, and back-to-back (exhausts facing each other) forming hot aisles expelling warm air to return plenums." },
-    { q: "What is the purpose of an STS (Static Transfer Switch)?", options: ["To switch between summer and winter cooling modes", "To transfer a load between two independent power sources in under 4 milliseconds", "To test generator output under static conditions", "To regulate voltage from the utility supply transformer"], answer: 1, explanation: "An STS continuously monitors two independent power feeds (A and B). If one fails, it transfers the load to the other in under 4 milliseconds — too fast for any IT equipment to detect the transition." },
-    { q: "What topology is preferred for modern data centre networks and why?", options: ["Ring topology — easy to manage", "Bus topology — lowest latency", "Leaf-spine topology — any server reachable in 2 hops, scales linearly", "Star topology — single point of control"], answer: 2, explanation: "Leaf-spine provides a flat, predictable network where any server can reach any other in exactly two hops (server → leaf switch → spine switch → leaf switch → server). It scales linearly by adding more leaf or spine switches." },
-    { q: "What is the difference between white space and grey space?", options: ["White space is cooler; grey space is warmer", "White space is the IT equipment area; grey space houses mechanical and electrical plant", "White space is for customers; grey space is for staff offices", "White space uses raised floors; grey space uses concrete slabs"], answer: 1, explanation: "White space is the computer hall housing IT equipment — controlled environment, strict access. Grey space is the mechanical and electrical plant area: UPS rooms, generator halls, chiller plant, switchrooms." },
-    { q: "Which fibre type is used for short runs within a data centre, and which for long distances?", options: ["Single-mode for short; multimode for long", "Multimode for short (up to ~300m); single-mode for long distances", "Both types perform identically at all distances", "Coaxial for short; multimode for long"], answer: 1, explanation: "Multimode fibre (OM3/OM4/OM5) is used for high-speed connections within the data centre up to ~300m. Single-mode fibre is used for longer distances — between buildings or between geographically separated data centres." },
+    { q: "In a hot-aisle/cold-aisle arrangement, how are server racks positioned?", options: ["All racks face the same direction", "Racks alternate front-to-front (cold) and back-to-back (hot)", "Racks are arranged in a circle", "Racks face the cooling units only"], answer: 1, explanation: "In a hot-aisle/cold-aisle layout, racks alternate: front-to-front forming cold aisles (intake air) and back-to-back forming hot aisles (exhaust air), preventing mixing." },
+    { q: "What is the purpose of blanking panels in server racks?", options: ["To label equipment", "To prevent hot exhaust air recirculating to the cold intake", "To provide cable management", "To mount additional switches"], answer: 1, explanation: "Blanking panels fill empty rack spaces, preventing hot air from the rear of the cabinet from recirculating to the front intake — maintaining airflow efficiency." },
+    { q: "What topology is preferred for modern data centre networks?", options: ["Ring topology", "Bus topology", "Leaf-spine topology", "Star topology"], answer: 2, explanation: "Leaf-spine topology is preferred for modern data centres as it provides consistent low latency, high bandwidth, and predictable east-west traffic paths between servers." },
+    { q: "What is the difference between white space and grey space?", options: ["White space is cooler; grey space is warmer", "White space houses IT equipment; grey space houses mechanical and electrical plant", "White space is for customers; grey space is for staff", "White space is the server room; grey space is the office"], answer: 1, explanation: "White space is the computer room/data hall containing IT equipment. Grey space houses the supporting M&E infrastructure: UPS rooms, generator halls, cooling plant rooms." },
+    { q: "Which fibre type is used for short runs within a data centre?", options: ["Single-mode fibre", "Multimode fibre", "Coaxial cable", "Cat6A copper"], answer: 1, explanation: "Multimode fibre is used for shorter runs within the data centre (up to ~300m at high speed). Single-mode fibre is used for longer distances between facilities." },
   ],
   working: [
-    { q: "What does RAMS stand for and when is it required?", options: ["Risk Assessment and Method Statements — required before any non-routine work", "Rack and Management Systems — required at commissioning", "Redundancy and Maintenance Schedule — required annually", "Regulated Access Management System — required for visitor access"], answer: 0, explanation: "RAMS stands for Risk Assessment and Method Statements. Both documents must be completed, reviewed, and signed by all personnel before any non-routine work begins in a data centre." },
-    { q: "What is the purpose of a Permit to Work (PTW)?", options: ["To record the location of assets in the data centre", "To formally manage high-risk tasks ensuring correct safety controls are identified and applied", "To authorise visitor access to the data hall", "To schedule planned maintenance windows"], answer: 1, explanation: "A PTW is a formal safety management document ensuring high-risk tasks (electrical isolation, hot work, confined space entry, etc.) are properly authorised by an Authorised Person with the correct controls in place." },
-    { q: "What is VESDA and why is it superior to conventional smoke detectors?", options: ["Visual Emergency System — it uses cameras", "Very Early Smoke Detection Apparatus — it samples air continuously detecting smoke at 0.005% obscuration, before visible smoke forms", "Voltage and Emergency Shutdown Detection Alarm", "Verified Electrical Safety Data Application"], answer: 1, explanation: "VESDA continuously samples air through pipe networks and detects smoke particles at 0.005% obscuration per metre — far below the threshold of conventional spot detectors — providing minutes of warning rather than seconds." },
-    { q: "In the Meta October 2021 outage, what type of failure caused 6 hours of global downtime?", options: ["A cooling system failure that overheated servers", "A change management failure — an unreviewed BGP configuration change removed Meta's border routers from the internet", "A power failure at their primary data centre", "A cyberattack that corrupted routing tables"], answer: 1, explanation: "Meta's 6-hour global outage was caused by a configuration change (BGP update) that had not been properly reviewed. It accidentally removed Meta's routers from the global routing table. Change management failure was the root cause." },
-    { q: "What is the correct sequence for the safe electrical isolation procedure?", options: ["Isolate → Prove dead → Secure → Identify → Work", "Identify → Isolate → Secure → Prove dead → Apply caution notices → Work", "Work → Isolate → Prove dead → Restore", "Prove dead → Identify → Isolate → Secure → Work"], answer: 1, explanation: "The correct sequence is: Identify the circuit → Isolate using appropriate means → Secure the isolation (LOTO) → Prove dead using an approved voltage indicator (test before AND after) → Apply caution notices → Proceed with work." },
+    { q: "What does RAMS stand for?", options: ["Risk Assessment and Method Statements", "Rack and Management Systems", "Redundancy and Maintenance Schedule", "Regulated Access Management System"], answer: 0, explanation: "RAMS stands for Risk Assessment and Method Statements — documents that must be completed and approved before non-routine work begins in a data centre." },
+    { q: "What is the purpose of a Permit to Work (PTW)?", options: ["To record asset locations", "To formally manage high-risk tasks ensuring correct safety controls are applied", "To authorise visitor access", "To schedule maintenance windows"], answer: 1, explanation: "A Permit to Work is a formal safety management system ensuring high-risk tasks (electrical isolation, hot work, confined space) are authorised and controlled with the correct safety measures." },
+    { q: "What does LOTO stand for and what is its purpose?", options: ["Log Out / Tag Out — recording faults", "Lockout / Tagout — physically isolating energy sources to prevent accidental re-energisation", "Limit Output / Test Output — power testing procedure", "Label Out / Track Out — asset management"], answer: 1, explanation: "LOTO (Lockout/Tagout) involves physically locking a circuit breaker open and attaching a personal tag — preventing anyone else from re-energising a circuit while work is in progress." },
+    { q: "What does VESDA stand for?", options: ["Ventilation and Emergency Suppression Detection Apparatus", "Very Early Smoke Detection Apparatus", "Verified Electrical Safety Data Application", "Verified Emergency Shutdown Detection Alarm"], answer: 1, explanation: "VESDA (Very Early Smoke Detection Apparatus) samples air continuously through a network of pipes, detecting smoke particles before visible smoke forms — providing the earliest possible fire warning." },
+    { q: "In data centre change management, what is a CAB?", options: ["Cabinet Access Board", "Change Advisory Board", "Cooling Asset Bureau", "Compliance Audit Body"], answer: 1, explanation: "The Change Advisory Board (CAB) is a group that reviews and approves significant changes to data centre infrastructure, assessing risk and ensuring rollback plans are in place." },
   ],
   maintenance: [
-    { q: "What type of maintenance uses infrared thermography and vibration analysis to predict failures?", options: ["Preventative maintenance (PPM)", "Predictive maintenance (PdM)", "Condition-based maintenance (CBM)", "Reliability Centred Maintenance (RCM)"], answer: 1, explanation: "Predictive maintenance uses condition monitoring technologies — thermal imaging, vibration analysis, oil sampling, ultrasonic testing — to detect developing faults before failure occurs, scheduling maintenance based on evidence rather than fixed intervals." },
-    { q: "Why must generators be tested under full load rather than just started?", options: ["No-load tests are prohibited by insurance policies", "A generator can start and run at no load but fail to maintain voltage and frequency when the real data centre electrical load is applied", "Load testing is cheaper than no-load testing", "Full load testing is only required for Tier IV facilities"], answer: 1, explanation: "Generator no-load testing only confirms the engine starts and runs. Full load bank testing at 100% rated output is the only way to confirm the generator can actually sustain the data centre's full electrical demand during a real power outage." },
-    { q: "What does L8 compliance require for cooling towers?", options: ["Annual inspection by a Tier 1 contractor only", "A written scheme of control, Responsible Person, monthly water sampling, biocide dosing, and annual physical cleaning to prevent Legionella", "Thermal imaging every 6 months", "Replacement of cooling tower every 10 years"], answer: 1, explanation: "HSE ACoP L8 requires: a written scheme of control, a designated Responsible Person, regular water sampling (monthly minimum), biocide dosing, blowdown management, and annual physical cleaning and disinfection to control Legionella bacteria." },
-    { q: "What does RCM stand for and what does it determine?", options: ["Remote Cooling Management — remote operation of cooling systems", "Reliability Centred Maintenance — the optimal maintenance strategy for each asset based on function, failure modes, and failure consequences", "Regulated Compliance Monitoring — compliance audit scheduling", "Rack Capacity Management — power and space planning"], answer: 1, explanation: "RCM (Reliability Centred Maintenance) is a structured methodology that analyses each asset's function, potential failure modes, and consequences of failure to determine the optimal maintenance approach — PPM, PdM, CBM, or run-to-failure." },
-    { q: "How should UPS battery replacement timing be determined?", options: ["Replace every 5 years regardless of condition", "Replace based on annual impedance test results — condition not calendar age determines replacement", "Replace immediately after any power outage event", "Replace when the UPS manufacturer recommends it in their service bulletin"], answer: 1, explanation: "VRLA batteries have a design life of 5–10 years, but individual batteries degrade at different rates. Annual impedance testing identifies batteries with elevated impedance (indicating degradation) that should be replaced — calendar age alone is an unreliable indicator." },
+    { q: "What type of maintenance is performed regardless of equipment condition, at fixed intervals?", options: ["Predictive maintenance", "Condition-based maintenance", "Preventative maintenance", "Reliability centred maintenance"], answer: 2, explanation: "Preventative Maintenance (PPM) is scheduled at fixed intervals regardless of equipment condition — e.g., annual UPS battery tests, quarterly CRAC filter changes." },
+    { q: "Which maintenance technique uses thermal imaging to detect electrical faults?", options: ["Preventative maintenance", "Predictive maintenance via infrared thermography", "Condition-based maintenance", "Both B and C are correct"], answer: 3, explanation: "Infrared thermography is used in both predictive maintenance (regularly scheduled thermal surveys) and condition-based maintenance (triggered by temperature threshold breaches)." },
+    { q: "What does RCM stand for in maintenance?", options: ["Remote Cooling Management", "Reliability Centred Maintenance", "Regulated Compliance Monitoring", "Rack Capacity Management"], answer: 1, explanation: "RCM (Reliability Centred Maintenance) is a structured methodology that analyses asset functions, failure modes, and failure consequences to determine the optimal maintenance strategy." },
+    { q: "Why must generators be tested under load rather than just started?", options: ["No-load tests are illegal", "A generator that starts may still fail to maintain voltage under full electrical load", "Load testing saves fuel", "It is only required for Tier IV facilities"], answer: 1, explanation: "A generator may start and run smoothly at no load, but fail to maintain output voltage or frequency when the full data centre load is applied. Load bank testing verifies it can handle real demand." },
+    { q: "What is the primary regulatory concern with cooling tower maintenance?", options: ["Refrigerant gas emissions", "Legionella bacteria proliferation in water systems (HSE L8)", "Noise pollution compliance", "Water consumption limits"], answer: 1, explanation: "Cooling towers are a known risk environment for Legionella bacteria. The HSE Approved Code of Practice L8 requires risk assessments, a Responsible Person, regular water sampling, and biocide treatment." },
   ],
   power: [
-    { q: "Which UK legislation is the primary legal requirement for electrical safety at work?", options: ["Health & Safety at Work Act 1974", "Electricity at Work Regulations 1989", "BS 7671 18th Edition Wiring Regulations", "Control of Substances Hazardous to Health (COSHH) Regulations"], answer: 1, explanation: "The Electricity at Work Regulations 1989 (EaWR) is the primary UK legislation placing specific legal duties on employers, self-employed, and employees to prevent danger arising from electrical systems and equipment." },
-    { q: "What is PUE and what does a value of 1.35 indicate?", options: ["Power Utilisation Efficiency — 1.35 means 35% efficiency", "Power Usage Effectiveness — 1.35 means 26% of total facility energy is used for overhead (cooling, UPS losses, lighting)", "Peak Usage Estimation — 1.35 MW average demand", "Primary Utility Equivalence — 1.35 generators per megawatt"], answer: 1, explanation: "PUE = Total Facility Energy ÷ IT Energy. A PUE of 1.35 means for every 1kW consumed by IT, 0.35kW is consumed by overhead systems (cooling, UPS conversion losses, lighting). 26% (0.35/1.35) of total energy is overhead." },
-    { q: "How does an STS (Static Transfer Switch) differ from an ATS (Automatic Transfer Switch)?", options: ["They are identical devices with different names", "STS transfers load in under 4ms (no IT interruption); ATS takes 20–100ms (may cause IT equipment resets)", "ATS is faster than STS", "STS is used for cooling systems; ATS is used for IT equipment"], answer: 1, explanation: "An STS (Static Transfer Switch) uses solid-state thyristors to transfer load in under 4ms — below the ride-through capability of IT equipment. An ATS uses mechanical contactors and takes 20–100ms — long enough for some equipment to reset." },
-    { q: "What is TN-S earthing and why is it standard in UK data centres?", options: ["Two Neutral, Single earth system — provides maximum earth fault clearance", "Separate Neutral and Protective Earth conductors from the transformer — eliminates neutral current on the PE conductor, providing cleaner earth reference for IT equipment", "Transformer Neutral to Supply — connects transformer neutral to site earth", "Total Network Separation — isolates each circuit earth"], answer: 1, explanation: "TN-S earthing uses completely separate Neutral (N) and Protective Earth (PE) conductors from the supply transformer to each load. This prevents neutral return current flowing on the PE conductor, providing a cleaner earth reference for sensitive IT equipment and better EMC performance." },
-    { q: "Why is fuel quality management important for stored diesel generators?", options: ["Fresh diesel produces more power", "Stored diesel degrades over time — microbial growth, water contamination, and oxidation can cause fuel system blockages leading to generator failure when most needed", "Older diesel is more efficient", "Fuel quality affects generator noise levels"], answer: 1, explanation: "Diesel stored in bulk tanks can develop microbial contamination (diesel bug), water ingress (causing rust and injector damage), and oxidation products that block fuel filters. Generators that fail to start during real power outages are frequently found to have fuel quality issues. Regular testing, biocide treatment, and fuel polishing are essential." },
+    { q: "In the UK, which legislation is the primary legal requirement for electrical safety at work?", options: ["Health & Safety at Work Act 1974", "Electricity at Work Regulations 1989", "BS 7671 Wiring Regulations", "Control of Substances Hazardous to Health (COSHH)"], answer: 1, explanation: "The Electricity at Work Regulations 1989 is the primary UK legislation placing legal duties on employers and employees to prevent danger from electrical systems." },
+    { q: "What is PUE and what does a lower value indicate?", options: ["Power Usage Efficiency — lower is worse", "Power Usage Effectiveness — lower means more efficient (less overhead energy wasted)", "Peak Usage Estimation — lower means less peak demand", "Power Unit Equivalence — lower means fewer generators needed"], answer: 1, explanation: "PUE = Total Facility Energy ÷ IT Equipment Energy. A PUE of 1.0 is perfect (100% efficiency). The lower the PUE, the more efficient the facility — less energy is wasted on cooling, UPS losses, and lighting." },
+    { q: "How long does a typical diesel generator take to start and reach full output?", options: ["1–2 seconds", "10–15 seconds", "30–60 seconds", "2–3 minutes"], answer: 1, explanation: "A typical 1500rpm diesel generator takes 10–15 seconds to start, synchronise, and accept load. The UPS battery system bridges this gap, providing seamless power continuity." },
+    { q: "What is the purpose of a Static Transfer Switch (STS)?", options: ["To switch between summer and winter cooling modes", "To automatically switch a load between two independent power sources in less than 4ms", "To test generator output under static load", "To regulate voltage from the utility supply"], answer: 1, explanation: "An STS (Static Transfer Switch) monitors both power sources continuously and transfers the connected load from one to the other in under 4ms — faster than any IT equipment can detect." },
+    { q: "What does TN-S earthing mean?", options: ["Two Neutral, Single earth system", "Separate Neutral and Protective Earth conductors throughout the installation", "Total Network, Separate zones", "Transformer Neutral to Supply"], answer: 1, explanation: "TN-S earthing means the Neutral (N) and Protective Earth (PE) conductors are separate throughout the entire installation — the standard approach for UK data centres, providing clean separation between return current and earth fault protection." },
   ],
   cooling: [
-    { q: "What is the formula for PUE and what does a lower value indicate?", options: ["IT Energy ÷ Total Facility Energy — lower means more overhead", "Total Facility Energy ÷ IT Equipment Energy — lower means more efficient (less overhead wasted)", "Cooling Energy ÷ IT Energy — lower means less cooling needed", "Total Power × Cooling Efficiency Factor"], answer: 1, explanation: "PUE = Total Facility Energy ÷ IT Equipment Energy. A PUE of 1.0 is theoretical perfection (100% of energy reaches IT). Lower values indicate greater efficiency — less energy wasted on cooling, UPS losses, and lighting. Best practice is PUE < 1.2." },
-    { q: "What is the ASHRAE recommended inlet temperature range for Class A2 servers?", options: ["5–20°C", "10–35°C with operational target 18–27°C", "18–22°C only (tight tolerance)", "0–40°C"], answer: 1, explanation: "ASHRAE A2 class allows server inlet temperatures of 10–35°C. Operators typically target 18–27°C in practice to maintain headroom, extend equipment life, and avoid thermal throttling at the upper end." },
-    { q: "Why does raising chilled water supply temperature from 7°C to 12°C improve efficiency?", options: ["Warmer water flows faster through pipes, reducing pump energy", "It reduces the temperature lift (differential) the chiller compressor must maintain, improving COP by approximately 15–25%", "Warmer supply water prevents pipe condensation in humid environments", "It allows smaller diameter pipes to be used, reducing capital cost"], answer: 1, explanation: "Chiller COP (Coefficient of Performance) improves by approximately 3–5% for every 1°C increase in chilled water supply temperature, because the compressor has less temperature differential to overcome. A 5°C rise (7→12°C) delivers approximately 15–25% chiller energy saving." },
-    { q: "What distinguishes two-phase immersion cooling from single-phase?", options: ["Two-phase uses two separate tanks; single-phase uses one tank", "Two-phase uses a fluid that boils off hot components and condenses on a cooling coil — no pumps needed; single-phase keeps fluid liquid throughout", "Two-phase is safer; single-phase uses flammable fluid", "Two-phase requires twice the water consumption"], answer: 1, explanation: "In two-phase immersion, a low boiling point dielectric fluid vaporises on contact with hot components, rises, condenses on a cooling coil above the liquid surface, and drips back — a passive cycle requiring no pumps. Single-phase keeps fluid liquid throughout and requires pumping." },
-    { q: "What Legionella guidance must cooling tower operators follow in the UK?", options: ["ISO 14001 environmental management standard", "HSE Approved Code of Practice L8 — Legionnaires Disease: Control of Legionella Bacteria in Water Systems", "BS EN 50600-2-3 cooling infrastructure standard", "CIBSE Guide M maintenance engineering standard"], answer: 1, explanation: "HSE Approved Code of Practice L8 is the specific guidance document governing Legionella control in water systems including cooling towers. It has quasi-legal status — deviation from it must be justified to a prosecuting authority." },
+    { q: "What is the formula for PUE?", options: ["IT Energy ÷ Total Facility Energy", "Total Facility Energy ÷ IT Equipment Energy", "Cooling Energy ÷ IT Energy", "Total Power × Cooling Efficiency"], answer: 1, explanation: "PUE = Total Facility Energy ÷ IT Equipment Energy. A perfectly efficient data centre would score 1.0, meaning all energy goes to IT with zero overhead. Real facilities range from ~1.1 (excellent) to 2.0+ (poor)." },
+    { q: "What is an air-side economiser?", options: ["A system that recirculates exhaust air back to the cooling units", "A system that uses outdoor air directly for cooling when temperature and humidity permit", "A system that reduces cooling by limiting server power", "A system that switches between multiple cooling towers"], answer: 1, explanation: "An air-side economiser draws outdoor air directly into the data centre when it is cool and dry enough, bypassing refrigeration compressors entirely — providing 'free cooling' from the environment." },
+    { q: "Why does raising chilled water supply temperature improve efficiency?", options: ["Warmer water flows faster in pipes", "Higher supply temperature reduces the temperature differential the chiller must maintain, improving COP", "Warmer water prevents Legionella growth", "It allows smaller pipe diameters to be used"], answer: 1, explanation: "Raising chilled water temperature reduces the lift (temperature difference) the chiller compressor must work against. Every 1°C increase in supply temperature improves chiller COP by approximately 3–5%." },
+    { q: "Which cooling method is most suitable for GPU racks exceeding 50kW?", options: ["Perimeter CRAC units", "Cold-aisle containment only", "Direct liquid cooling (cold plates on CPUs/GPUs)", "Increased air volume from ceiling units"], answer: 2, explanation: "At densities above ~25–30kW per rack, air cooling alone cannot remove heat efficiently. Direct liquid cooling (DLC) with cold plates attached to CPUs and GPUs removes heat directly at the source." },
+    { q: "What Legionella guidance must cooling tower operators follow in the UK?", options: ["ISO 14001 environmental standard", "HSE Approved Code of Practice L8", "BS EN 50600-2-3", "CIBSE Guide M"], answer: 1, explanation: "HSE Approved Code of Practice L8 (Legionnaires Disease: Control of Legionella Bacteria in Water Systems) requires risk assessment, a Responsible Person, regular water sampling, and biocide dosing for cooling towers." },
   ],
 };
 
-// ─── MOCK TEST ─────────────────────────────────────────────────────────────────
+// ─── MOCK TEST QUESTIONS (30 questions, cross-topic) ──────────────────────────
 
-const MOCK_TEST = [
-  { q: "What Tier guarantees fault tolerance where a single failure will not cause downtime?", options: ["Tier I", "Tier II", "Tier III", "Tier IV"], answer: 3, section: "fundamentals" },
-  { q: "Which standard governs UK electrical wiring installations?", options: ["BS EN 50600", "BS 7671", "ISO 27001", "TIA-942"], answer: 1, section: "compliance" },
-  { q: "What topology is preferred for modern data centre networks?", options: ["Ring", "Bus", "Leaf-spine", "Star"], answer: 2, section: "infrastructure" },
-  { q: "VESDA provides what type of early warning?", options: ["Voltage surge detection", "Very early smoke detection at 0.005% obscuration", "Vibration-based equipment monitoring", "Visual emergency shutdown alert"], answer: 1, section: "working" },
-  { q: "Preventative maintenance (PPM) is performed:", options: ["Only when a fault is detected", "At fixed scheduled intervals regardless of equipment condition", "Based on real-time sensor threshold breaches", "Only after equipment failures"], answer: 1, section: "maintenance" },
-  { q: "PUE stands for:", options: ["Peak Usage Estimation", "Power Unit Equivalence", "Power Usage Effectiveness", "Primary Utility Efficiency"], answer: 2, section: "power" },
-  { q: "An air-side economiser uses:", options: ["Recirculated exhaust air", "Outdoor air directly for cooling when temperature and humidity conditions permit", "Chilled water free-cooling only", "Increased server fan speeds to reduce cooling demand"], answer: 1, section: "cooling" },
-  { q: "What does 2N power redundancy mean?", options: ["Two network paths to core switches", "Every critical power component is completely duplicated — two fully independent systems", "Two generators share one UPS", "Dual utility feeds only"], answer: 1, section: "fundamentals" },
-  { q: "ISO/IEC 27001 certifies:", options: ["Building construction quality", "Information Security Management Systems", "Cooling system energy efficiency", "Network cabling installation standards"], answer: 1, section: "compliance" },
-  { q: "In HAC/CAC layout, racks are arranged:", options: ["All facing one direction", "Back-to-back (hot aisle) and front-to-front (cold aisle)", "In circles around cooling units", "Randomly for maximum density"], answer: 1, section: "infrastructure" },
-  { q: "LOTO stands for:", options: ["Log Out Tag Out — fault recording", "Lockout Tagout — physical isolation of energy sources preventing re-energisation", "Limit Output Test Output — power testing", "Label Out Track Out — asset tagging"], answer: 1, section: "working" },
-  { q: "Infrared thermography on LV switchgear is used to:", options: ["Map cable locations", "Detect hot spots from loose connections before they arc-fault", "Measure room temperature uniformity", "Inspect cooling coil cleanliness"], answer: 1, section: "maintenance" },
-  { q: "A diesel generator typically starts and accepts full load in:", options: ["1–2 seconds", "10–15 seconds", "60–90 seconds", "3–5 minutes"], answer: 1, section: "power" },
-  { q: "Raising chilled water supply temperature by 1°C improves chiller efficiency by approximately:", options: ["0.5%", "3–5%", "10%", "15–20%"], answer: 1, section: "cooling" },
-  { q: "The Uptime Institute Tier Certification covers:", options: ["Only facility design documents", "Design, construction, and ongoing operations — all three must be certified for full certification", "Only ongoing operational management", "Only physical security systems"], answer: 1, section: "compliance" },
-  { q: "What gaseous suppression agent has near-zero GWP and is replacing FM-200?", options: ["CO₂", "Novec 1230", "IG-541 inert gas", "Halon 1301"], answer: 1, section: "working" },
-  { q: "White space in a data centre refers to:", options: ["Unpainted wall areas", "The computer hall housing IT equipment — controlled environment, strict access", "Space between raised floor tiles", "Areas without CCTV coverage"], answer: 1, section: "infrastructure" },
-  { q: "RCM (Reliability Centred Maintenance) determines:", options: ["Remote access to cooling controls", "The optimal maintenance strategy for each asset based on function, failure modes, and consequences", "Regulated compliance reporting schedule", "Rack power capacity management"], answer: 1, section: "maintenance" },
-  { q: "An STS (Static Transfer Switch) transfers load between power sources in:", options: ["Less than 4 milliseconds", "Less than 1 second", "2–5 seconds", "10–15 seconds"], answer: 0, section: "power" },
-  { q: "DLC (Direct Liquid Cooling) is primarily used for:", options: ["Standard 1U servers below 5kW", "Low-density storage arrays", "High-density GPU/AI workloads exceeding 30–50kW per rack", "Cooling the UPS battery room"], answer: 2, section: "cooling" },
-  { q: "What must every change in a data centre include as standard?", options: ["Approval from the CEO", "A documented rollback plan executable within the agreed change window", "A full facility shutdown window", "Manual verification by a third-party auditor"], answer: 1, section: "working" },
-  { q: "TN-S earthing uses:", options: ["Two Neutral conductors", "Completely separate Neutral and Protective Earth conductors from the transformer", "Total isolation of neutral from earth", "Transformer neutral bonded to structural steel"], answer: 1, section: "power" },
-  { q: "HSE ACoP L8 addresses:", options: ["Electrical safety in industrial premises", "Control of Legionella bacteria in water systems including cooling towers", "Fire suppression system design standards", "Manual handling in data centres"], answer: 1, section: "cooling" },
-  { q: "In data centre cabling, multimode OM4 fibre is used for:", options: ["Inter-site long-distance connections", "Short high-speed runs within the data centre up to ~300m", "WAN connectivity to carriers", "Power-over-ethernet applications"], answer: 1, section: "infrastructure" },
-  { q: "DCIM stands for:", options: ["Data Centre Infrastructure Management", "Digital Computing Infrastructure Monitor", "Data Centre Installation Module", "Distributed Cooling Interface Management"], answer: 0, section: "working" },
-  { q: "Generator load bank testing must verify:", options: ["That the engine starts and produces exhaust", "That the generator can sustain 100% rated output for a minimum of 2 hours", "That the fuel gauge reads correctly", "That the ATS activates within 30 seconds"], answer: 1, section: "maintenance" },
-  { q: "Which organisation publishes the Tier I–IV data centre classification system?", options: ["ISO", "TIA", "ASHRAE", "Uptime Institute"], answer: 3, section: "fundamentals" },
-  { q: "PCI-DSS compliance is specifically required for:", options: ["All government-hosted data", "Environments that store, process, or transmit payment card data", "All cloud computing environments", "Tier III and Tier IV facilities only"], answer: 1, section: "compliance" },
-  { q: "What does MACs stand for in data centre operations?", options: ["Monitoring and Control Systems", "Moves, Adds and Changes", "Managed Access Controls", "Mechanical and Cooling Systems"], answer: 1, section: "working" },
-  { q: "Condition-based maintenance (CBM) is triggered by:", options: ["Fixed calendar dates regardless of condition", "Real-time condition indicators crossing a predefined threshold", "Equipment age reaching a milestone", "Annual third-party audit recommendations"], answer: 1, section: "maintenance" },
+const MOCK_TEST_QUESTIONS = [
+  { q: "What Tier guarantees fault tolerance where a single failure will not cause downtime?", options: ["Tier I", "Tier II", "Tier III", "Tier IV"], answer: 3, section: "Fundamentals" },
+  { q: "Which standard governs UK electrical wiring installations?", options: ["BS EN 50600", "BS 7671", "ISO 27001", "TIA-942"], answer: 1, section: "Compliance" },
+  { q: "What is the standard topology for modern data centre networks?", options: ["Ring", "Bus", "Leaf-spine", "Mesh"], answer: 2, section: "Infrastructure" },
+  { q: "VESDA provides what type of protection?", options: ["Power surge protection", "Very early smoke detection", "Voltage regulation", "Visual equipment damage assessment"], answer: 1, section: "Working in DC" },
+  { q: "Preventative maintenance is performed at:", options: ["Fixed intervals regardless of condition", "Only when faults are detected", "Based on sensor threshold breaches", "Only during equipment failure"], answer: 0, section: "Maintenance" },
+  { q: "PUE stands for:", options: ["Peak Usage Estimation", "Power Unit Equivalence", "Power Usage Effectiveness", "Primary Utility Efficiency"], answer: 2, section: "Power" },
+  { q: "An air-side economiser works by:", options: ["Recirculating server exhaust air", "Using outdoor air directly for cooling when conditions permit", "Reducing server power to lower heat output", "Increasing chilled water flow rate"], answer: 1, section: "Cooling" },
+  { q: "What does 2N power redundancy mean?", options: ["Two paths to the network", "Every critical power component is fully doubled", "Two generators per data hall", "Dual utility feeds only"], answer: 1, section: "Fundamentals" },
+  { q: "ISO/IEC 27001 certifies:", options: ["Building construction quality", "Information Security Management Systems", "Cooling system efficiency", "Network cabling standards"], answer: 1, section: "Compliance" },
+  { q: "In hot-aisle/cold-aisle layout, racks are arranged:", options: ["All facing the same direction", "Back-to-back (hot) and front-to-front (cold)", "In circles around the cooling units", "Randomly for flexibility"], answer: 1, section: "Infrastructure" },
+  { q: "LOTO stands for:", options: ["Log Out Tag Out", "Lockout Tagout — physical isolation of energy sources", "Limit Output Test Output", "Label Out Track Out"], answer: 1, section: "Working in DC" },
+  { q: "Infrared thermography is most commonly used to:", options: ["Map server locations", "Detect electrical hot spots indicating loose connections or overloaded circuits", "Measure server room temperature uniformly", "Check cooling coil cleanliness"], answer: 1, section: "Maintenance" },
+  { q: "A diesel generator typically takes how long to reach full output?", options: ["1–2 seconds", "10–15 seconds", "60–90 seconds", "3–5 minutes"], answer: 1, section: "Power" },
+  { q: "Raising chilled water supply temperature improves efficiency because:", options: ["Water flows faster when warmer", "It reduces the temperature lift the chiller compressor must work against", "Warmer water requires less pumping energy", "It extends pipe lifespans"], answer: 1, section: "Cooling" },
+  { q: "What does the Uptime Institute Tier certification confirm?", options: ["That the data centre uses renewable energy", "That the facility genuinely meets its claimed Tier in design, construction, and operations", "That all staff are trained to ISO standards", "That the building is fire-proof"], answer: 1, section: "Compliance" },
+  { q: "Which fire suppression system is typically used in data centres to protect IT equipment?", options: ["Water sprinklers", "Foam suppression", "Gaseous suppression (FM-200/Novec/inert gas)", "Dry powder systems"], answer: 2, section: "Working in DC" },
+  { q: "What is white space in a data centre?", options: ["Any unpainted wall space", "The computer room/data hall housing IT equipment", "The space between raised floor tiles", "Areas with high ambient light"], answer: 1, section: "Infrastructure" },
+  { q: "RCM in maintenance stands for:", options: ["Remote Cooling Management", "Reliability Centred Maintenance", "Regulated Compliance Monitoring", "Rack Capacity Management"], answer: 1, section: "Maintenance" },
+  { q: "An STS (Static Transfer Switch) switches a load between power sources in:", options: ["Less than 4 milliseconds", "Less than 1 second", "2–5 seconds", "10–15 seconds"], answer: 0, section: "Power" },
+  { q: "Direct Liquid Cooling (DLC) is primarily used for:", options: ["Standard 1U servers below 5kW", "Low-density storage arrays", "High-density GPU/AI workloads exceeding 30–50kW per rack", "Cooling the UPS room"], answer: 2, section: "Cooling" },
+  { q: "A Permit to Work (PTW) is required for:", options: ["All routine tasks", "High-risk tasks only — electrical isolation, hot work, confined space entry", "Monthly maintenance visits", "Any task lasting more than 1 hour"], answer: 1, section: "Working in DC" },
+  { q: "TN-S earthing means:", options: ["Two Neutral, Single earth system", "Separate Neutral and Protective Earth conductors throughout the installation", "Total Network, Separate zones", "Transformer Neutral to Supply"], answer: 1, section: "Power" },
+  { q: "The HSE Approved Code of Practice L8 addresses:", options: ["Electrical safety regulations", "Legionella bacteria control in water systems including cooling towers", "Fire suppression system standards", "Manual handling in data centres"], answer: 1, section: "Cooling" },
+  { q: "In data centre cabling, multimode fibre is primarily used for:", options: ["Long-distance inter-site connections", "Short runs within the data centre", "Connections to the power distribution units", "WAN connectivity"], answer: 1, section: "Infrastructure" },
+  { q: "What does DCIM stand for?", options: ["Data Centre Infrastructure Management", "Digital Computing Infrastructure Monitor", "Data Centre Installation Module", "Distributed Cooling Interface Module"], answer: 0, section: "Working in DC" },
+  { q: "Generator load bank testing is performed to:", options: ["Test the cooling capacity under heat", "Verify the generator can maintain output under full electrical load", "Calibrate the fuel gauge", "Test the automatic transfer switch timing only"], answer: 1, section: "Maintenance" },
+  { q: "Which organisation publishes the Tier I–IV data centre classification system?", options: ["ISO", "TIA", "ASHRAE", "Uptime Institute"], answer: 3, section: "Fundamentals" },
+  { q: "PCI-DSS compliance is required for environments that:", options: ["Host government data", "Store, process, or transmit payment card data", "Use cloud computing", "Operate at Tier III or above"], answer: 1, section: "Compliance" },
+  { q: "What does MACs stand for in data centre operations?", options: ["Monitoring and Control Systems", "Moves, Adds and Changes", "Managed Access Controls", "Mechanical and Cooling Systems"], answer: 1, section: "Working in DC" },
+  { q: "Condition-based maintenance is triggered by:", options: ["Fixed calendar dates", "Real-time condition indicators crossing a predefined threshold", "Equipment age milestones", "Annual audits"], answer: 1, section: "Maintenance" },
 ];
 
+// ─── COMPONENT ────────────────────────────────────────────────────────────────
 
-// ─── FLASHCARD DATA (key points as cards per section) ─────────────────────────
-const buildFlashcards = () => {
-  const cards = [];
-  SECTIONS.forEach(sec => {
-    sec.topics.forEach(topic => {
-      topic.keyPoints.forEach((kp, i) => {
-        cards.push({ id: `${sec.id}-${topic.title}-${i}`, section: sec.id, sectionTitle: sec.title, sectionColor: sec.color, sectionIcon: sec.icon, front: topic.title, back: kp });
-      });
-    });
-  });
-  return cards;
-};
-
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-const renderMd = (text, color = T.navy) =>
-  text.replace(/\*\*(.*?)\*\*/g, `<strong style="color:${color};font-weight:600">$1</strong>`);
-
-const NavBar = ({ onHome, extra }) => (
-  <nav className="no-print" style={{ background: T.navy, padding: "0 clamp(12px,3vw,24px)", height: 54, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 35, boxShadow: "0 2px 8px rgba(0,0,0,0.18)", gap: 8, overflow: "hidden" }}>
-    <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0, minWidth: 0 }}>
-      <div style={{ width: 26, height: 26, background: T.white, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0 }}>🏢</div>
-      <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(13px,3vw,16px)", fontWeight: 700, color: T.white, cursor: "pointer", whiteSpace: "nowrap" }} onClick={onHome}>DC Training</span>
-    </div>
-    <div style={{ display: "flex", gap: 5, alignItems: "center", flexShrink: 0 }}>{extra}</div>
-  </nav>
-);
-
-const Footer = () => (
-  <footer className="no-print" style={{ background: T.navy, padding: "clamp(20px,4vw,32px) clamp(14px,4vw,28px)", marginTop: 32 }}>
-    <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 24, height: 24, background: "rgba(255,255,255,0.15)", borderRadius: 5, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>🏢</div>
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, color: T.white, fontWeight: 700 }}>DC Training</span>
-        </div>
-        <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-          {["7 Modules", "23 Topics", "35 Quiz Questions", "30 Mock Questions"].map(t => (
-            <span key={t} style={{ fontSize: 11, color: "rgba(255,255,255,0.45)" }}>{t}</span>
-          ))}
-        </div>
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>Data Centre Fundamentals &amp; Operations · Professional Training Programme</p>
-        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>© {new Date().getFullYear()} All rights reserved</p>
-      </div>
-    </div>
-  </footer>
-);
-
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
-export default function App() {
-  const [view, setView] = useState("home");
-  const [activeSectionId, setActiveSectionId] = useState(SECTIONS[0].id);
-  const [activeTopicIdx, setActiveTopicIdx] = useState(0);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [quizSectionId, setQuizSectionId] = useState(null);
+export default function DataCentreApp() {
+  const [view, setView] = useState("home"); // home | learn | quiz | mock
+  const [activeSection, setActiveSection] = useState(null);
+  const [activeTopic, setActiveTopic] = useState(0);
+  const [quizSection, setQuizSection] = useState(null);
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [mockAnswers, setMockAnswers] = useState({});
   const [mockSubmitted, setMockSubmitted] = useState(false);
-  const [progress, setProgress] = useState({});           // {sectionId-qi: true}
-  const [bookmarks, setBookmarks] = useState({});         // {"sectionId-topicIdx": true}
-  const [lastVisited, setLastVisited] = useState(null);   // {sectionId, topicIdx}
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [flashSectionId, setFlashSectionId] = useState(null);
-  const [flashIdx, setFlashIdx] = useState(0);
-  const [flashFlipped, setFlashFlipped] = useState(false);
-  const [mockTimer, setMockTimer] = useState(45 * 60);   // 45 min in seconds
-  const [mockTimerRunning, setMockTimerRunning] = useState(false);
-  const contentRef = useRef(null);
-  const timerRef = useRef(null);
+  const [progress, setProgress] = useState({});
+  const [showExplanation, setShowExplanation] = useState({});
 
-  // Mock timer
-  useEffect(() => {
-    if (mockTimerRunning && !mockSubmitted) {
-      timerRef.current = setInterval(() => {
-        setMockTimer(t => {
-          if (t <= 1) { clearInterval(timerRef.current); setMockSubmitted(true); return 0; }
-          return t - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timerRef.current);
-  }, [mockTimerRunning, mockSubmitted]);
-
-  const fmtTime = s => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-
-  const activeSection = SECTIONS.find(s => s.id === activeSectionId) || SECTIONS[0];
-  const activeTopic = activeSection.topics[activeTopicIdx] || activeSection.topics[0];
-
-  const goToLearn = (sectionId, topicIdx = 0) => {
-    setActiveSectionId(sectionId);
-    setActiveTopicIdx(topicIdx);
-    setView("learn");
-    setSidebarOpen(false);
-    setLastVisited({ sectionId, topicIdx });
-    if (contentRef.current) contentRef.current.scrollTop = 0;
+  const sectionProgress = (sectionId) => {
+    const qs = QUIZ_QUESTIONS[sectionId] || [];
+    const done = Object.keys(progress).filter(k => k.startsWith(sectionId)).length;
+    return qs.length > 0 ? Math.round((done / qs.length) * 100) : 0;
   };
 
-  const toggleBookmark = (sectionId, topicIdx) => {
-    const key = `${sectionId}-${topicIdx}`;
-    setBookmarks(b => ({ ...b, [key]: !b[key] }));
-  };
-
-  const isBookmarked = (sectionId, topicIdx) => !!bookmarks[`${sectionId}-${topicIdx}`];
-  const bookmarkCount = Object.values(bookmarks).filter(Boolean).length;
-
-  // Search
-  const allTopics = [];
-  SECTIONS.forEach(sec => sec.topics.forEach((t, ti) => allTopics.push({ ...t, sectionId: sec.id, sectionTitle: sec.title, sectionColor: sec.color, sectionIcon: sec.icon, topicIdx: ti })));
-  const searchResults = searchQuery.trim().length >= 2 ? allTopics.filter(t => {
-    const q = searchQuery.toLowerCase();
-    return t.title.toLowerCase().includes(q) || t.content.toLowerCase().includes(q) || t.keyPoints.some(k => k.toLowerCase().includes(q));
-  }) : [];
-
-  // PDF export
-  const exportPDF = () => {
-    const sec = SECTIONS.find(s => s.id === activeSectionId);
-    const topic = sec.topics[activeTopicIdx];
-    const printWin = window.open("", "_blank");
-    printWin.document.write(`<!DOCTYPE html><html><head><title>${topic.title} - DC Training</title>
-    <style>
-      body{font-family:Georgia,serif;max-width:720px;margin:40px auto;color:#1e293b;line-height:1.75;}
-      h1{font-size:26px;color:#1e3a5f;margin-bottom:8px;}
-      h2{font-size:16px;color:#475569;font-weight:400;margin-bottom:28px;border-bottom:2px solid #e2e8f0;padding-bottom:10px;}
-      h3{font-size:14px;color:#1e3a5f;text-transform:uppercase;letter-spacing:2px;margin:28px 0 10px;}
-      p{margin-bottom:14px;font-size:15px;color:#334155;}
-      strong{color:#1e3a5f;}
-      .example{background:#f8fafc;border-left:4px solid #1e3a5f;padding:16px 20px;margin:20px 0;border-radius:4px;}
-      .key-points{list-style:none;padding:0;}
-      .key-points li{padding:6px 0 6px 18px;border-bottom:1px solid #f1f5f9;font-size:14px;position:relative;}
-      .key-points li::before{content:"•";position:absolute;left:0;color:#1e3a5f;font-weight:bold;}
-      .footer{margin-top:40px;padding-top:14px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;display:flex;justify-content:space-between;}
-    </style></head><body>
-    <h2>${sec.icon} ${sec.title}</h2>
-    <h1>${topic.title}</h1>
-    <h3>Overview</h3>
-    ${topic.content.split("\n\n").map(p => `<p>${p.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")}</p>`).join("")}
-    <div class="example"><h3 style="margin-top:0">Real-World Example</h3>
-    <p>${topic.example.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")}</p></div>
-    <h3>Key Points</h3>
-    <ul class="key-points">${topic.keyPoints.map(k => `<li>${k}</li>`).join("")}</ul>
-    <div class="footer"><span>DC Training — Data Centre Fundamentals</span><span>© ${new Date().getFullYear()}</span></div>
-    </body></html>`);
-    printWin.document.close();
-    setTimeout(() => { printWin.print(); }, 400);
-  };
-
-  // Quiz
-  const quizSection = SECTIONS.find(s => s.id === quizSectionId);
-  const quizQs = QUIZ_QUESTIONS[quizSectionId] || [];
-
-  // Flashcards
-  const allFlashcards = buildFlashcards();
-  const flashCards = flashSectionId ? allFlashcards.filter(c => c.section === flashSectionId) : allFlashcards;
-
-  // ── HOME ──────────────────────────────────────────────────────────────────────
+  // ── HOME ──
   if (view === "home") {
-    const bookmarkedTopics = allTopics.filter(t => isBookmarked(t.sectionId, t.topicIdx));
     return (
-      <div style={{ minHeight: "100vh", background: T.bg }}>
-        <style>{GLOBAL_STYLES}</style>
-        <NavBar onHome={() => setView("home")} extra={
-          <>
-            <button onClick={() => setSearchOpen(true)} style={{ padding: "5px 10px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 12, whiteSpace: "nowrap" }}>🔍 <span className="nav-label">Search</span></button>
-            <button onClick={() => setView("quiz")} style={{ padding: "5px 10px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 12, whiteSpace: "nowrap" }}><span className="nav-label">Quizzes</span><span style={{ display: "none" }} className="nav-short">📋</span></button>
-            <button onClick={() => { setMockAnswers({}); setMockSubmitted(false); setMockTimer(45*60); setMockTimerRunning(false); setView("mock"); }} style={{ padding: "5px 11px", background: T.white, color: T.navy, borderRadius: 6, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>Mock Test</button>
-          </>
-        } />
-
-        {/* Search modal */}
-        {searchOpen && (
-          <div onClick={() => setSearchOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.5)", zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: "8vh", padding: "8vh 12px 0" }}>
-            <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 600, background: T.white, borderRadius: 12, boxShadow: "0 20px 60px rgba(0,0,0,0.25)", overflow: "hidden" }}>
-              <div style={{ padding: "13px 15px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", gap: 9 }}>
-                <span style={{ fontSize: 17 }}>🔍</span>
-                <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search topics, content, key points…"
-                  style={{ flex: 1, fontSize: 15, border: "none", outline: "none", color: T.text, background: "transparent", fontFamily: "'DM Sans', sans-serif", minWidth: 0 }} />
-                <button onClick={() => setSearchOpen(false)} style={{ color: T.muted, background: "none", fontSize: 18, padding: "0 4px", flexShrink: 0 }}>✕</button>
-              </div>
-              <div style={{ maxHeight: "60vh", overflowY: "auto" }}>
-                {searchQuery.trim().length < 2 && (
-                  <div style={{ padding: "22px 18px", textAlign: "center", color: T.muted, fontSize: 14 }}>Type at least 2 characters to search across all 23 topics…</div>
-                )}
-                {searchResults.length === 0 && searchQuery.trim().length >= 2 && (
-                  <div style={{ padding: "22px 18px", textAlign: "center", color: T.muted, fontSize: 14 }}>No results found for "{searchQuery}"</div>
-                )}
-                {searchResults.map((t, i) => (
-                  <div key={i} onClick={() => { goToLearn(t.sectionId, t.topicIdx); setSearchOpen(false); setSearchQuery(""); }}
-                    style={{ padding: "11px 15px", borderBottom: `1px solid ${T.border}`, cursor: "pointer", display: "flex", gap: 10, alignItems: "flex-start" }}
-                    onMouseEnter={e => e.currentTarget.style.background = T.bgAlt}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                    <span style={{ fontSize: 18, flexShrink: 0, marginTop: 2 }}>{t.sectionIcon}</span>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 2 }}>{t.title}</div>
-                      <div style={{ fontSize: 11, color: t.sectionColor, fontWeight: 600, marginBottom: 3 }}>{t.sectionTitle}</div>
-                      <div style={{ fontSize: 12, color: T.slateLt, lineHeight: 1.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {t.content.substring(0, 100).replace(/\*\*/g, "")}…
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+      <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "'Georgia', serif", color: "#e8f4f8" }}>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600&display=swap');
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { background: #0a0f1e; }
+          .card-hover { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; }
+          .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,180,216,0.25); }
+          .btn { cursor: pointer; border: none; outline: none; transition: all 0.2s; }
+          .btn:hover { opacity: 0.85; }
+          ::-webkit-scrollbar { width: 6px; } 
+          ::-webkit-scrollbar-track { background: #0a0f1e; }
+          ::-webkit-scrollbar-thumb { background: #00B4D8; border-radius: 3px; }
+        `}</style>
 
         {/* Hero */}
-        <div style={{ background: `linear-gradient(135deg, ${T.navy} 0%, ${T.navyLt} 100%)`, padding: "clamp(28px,5vw,60px) clamp(16px,5vw,52px)" }}>
-          <div style={{ maxWidth: 1100, margin: "0 auto" }} className="fade-in">
-            <div style={{ display: "inline-block", padding: "3px 12px", background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)", borderRadius: 20, fontSize: 10, color: T.white, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 16 }}>
-              7 Modules · 23 Topics · Quizzes · Mock Test · Flashcards
+        <div style={{ background: "linear-gradient(135deg, #0a0f1e 0%, #0d1b2a 50%, #071520 100%)", padding: "60px 40px 50px", borderBottom: "1px solid rgba(0,180,216,0.2)" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
+              <div style={{ width: 4, height: 60, background: "#00B4D8", borderRadius: 2 }} />
+              <div>
+                <div style={{ fontSize: 11, letterSpacing: 4, color: "#00B4D8", fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600, textTransform: "uppercase", marginBottom: 8 }}>Professional Training Programme</div>
+                <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(32px, 5vw, 56px)", fontWeight: 900, lineHeight: 1.1, color: "#ffffff" }}>
+                  Data Centre<br />
+                  <span style={{ color: "#00B4D8" }}>Fundamentals</span>
+                </h1>
+              </div>
             </div>
-            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(26px,5vw,50px)", fontWeight: 900, lineHeight: 1.12, color: T.white, marginBottom: 12 }}>
-              Data Centre<br /><span style={{ borderBottom: "3px solid rgba(255,255,255,0.4)" }}>Fundamentals</span>
-            </h1>
-            <p style={{ fontSize: "clamp(13px,2vw,15px)", color: "rgba(255,255,255,0.7)", maxWidth: 480, lineHeight: 1.7, marginBottom: 22 }}>
-              Comprehensive professional training — detailed content, real-world examples, quizzes, flashcard revision, and a timed mock exam.
+            <p style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 17, color: "#94a3b8", maxWidth: 580, lineHeight: 1.7, marginLeft: 20 }}>
+              Master data centre concepts across 7 modules with detailed explanations, real-world examples, interactive quizzes, and a full mock examination.
             </p>
-            <div className="hero-btns">
-              {lastVisited ? (
-                <button className="card-lift hero-btn" onClick={() => goToLearn(lastVisited.sectionId, lastVisited.topicIdx)}
-                  style={{ background: T.white, color: T.navy, border: "none" }}>
-                  ↩ Continue Where You Left Off
-                </button>
-              ) : (
-                <button className="card-lift hero-btn" onClick={() => goToLearn(SECTIONS[0].id)}
-                  style={{ background: T.white, color: T.navy, border: "none" }}>
-                  Start Learning →
-                </button>
-              )}
-              <button className="card-lift hero-btn" onClick={() => { setMockAnswers({}); setMockSubmitted(false); setMockTimer(45*60); setMockTimerRunning(false); setView("mock"); }}
-                style={{ background: "rgba(255,255,255,0.12)", color: T.white, border: "1px solid rgba(255,255,255,0.3)" }}>
-                ⏱ Mock Test
+            <div style={{ display: "flex", gap: 12, marginTop: 32, marginLeft: 20, flexWrap: "wrap" }}>
+              <button className="btn" onClick={() => setView("learn")} style={{ padding: "14px 32px", background: "#00B4D8", color: "#0a0f1e", borderRadius: 8, fontFamily: "'Source Sans 3', sans-serif", fontSize: 15, fontWeight: 700, letterSpacing: 0.5 }}>
+                📚 Start Learning
               </button>
-              <button className="card-lift hero-btn" onClick={() => { setFlashSectionId(null); setFlashIdx(0); setFlashFlipped(false); setView("flashcards"); }}
-                style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.2)" }}>
-                🃏 Flashcards
+              <button className="btn" onClick={() => { setView("quiz"); setQuizSection(null); }} style={{ padding: "14px 32px", background: "rgba(0,180,216,0.1)", color: "#00B4D8", border: "1px solid rgba(0,180,216,0.4)", borderRadius: 8, fontFamily: "'Source Sans 3', sans-serif", fontSize: 15, fontWeight: 600 }}>
+                🧠 Topic Quizzes
+              </button>
+              <button className="btn" onClick={() => { setMockAnswers({}); setMockSubmitted(false); setView("mock"); }} style={{ padding: "14px 32px", background: "rgba(240,165,0,0.1)", color: "#F0A500", border: "1px solid rgba(240,165,0,0.4)", borderRadius: 8, fontFamily: "'Source Sans 3', sans-serif", fontSize: 15, fontWeight: 600 }}>
+                📝 Mock Test (30 Qs)
               </button>
             </div>
           </div>
         </div>
 
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(18px,4vw,44px) clamp(14px,4vw,32px)" }}>
-
-          {/* Continue / Bookmarks strip */}
-          {bookmarkCount > 0 && (
-            <div style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 10, padding: "14px 16px", marginBottom: 24, boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-              <div style={{ fontSize: 12, color: T.navy, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>🔖 Bookmarked Topics ({bookmarkCount})</div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {bookmarkedTopics.map(t => (
-                  <button key={`${t.sectionId}-${t.topicIdx}`} onClick={() => goToLearn(t.sectionId, t.topicIdx)}
-                    style={{ padding: "5px 12px", background: T.bgAlt, border: `1px solid ${T.border}`, borderRadius: 20, fontSize: 12, color: T.text, cursor: "pointer" }}>
-                    {t.sectionIcon} {t.title}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Modules */}
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(17px,3vw,22px)", color: T.text, marginBottom: 6 }}>Course Modules</h2>
-          <p style={{ fontSize: 13, color: T.slateLt, marginBottom: 20 }}>Click any module to begin. Your quiz progress is tracked automatically.</p>
-          <div className="module-grid">
-            {SECTIONS.map((s, i) => {
-              const done = Object.keys(progress).filter(k => k.startsWith(s.id + "-")).length;
-              const total = (QUIZ_QUESTIONS[s.id] || []).length;
-              const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-              return (
-                <div key={s.id} className="card-lift fade-in" onClick={() => goToLearn(s.id)}
-                  style={{ animationDelay: `${i * 0.04}s`, background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: "18px 18px 14px", cursor: "pointer", position: "relative", overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: s.color }} />
-                  <div style={{ fontSize: 24, marginBottom: 9 }}>{s.icon}</div>
-                  <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, color: T.text, marginBottom: 4, lineHeight: 1.35 }}>{s.title}</h3>
-                  <p style={{ fontSize: 11, color: T.muted, marginBottom: 12 }}>{s.topics.length} topics · {total} quiz questions</p>
-                  <div style={{ height: 3, background: T.bgAlt, borderRadius: 2 }}>
-                    <div style={{ height: "100%", width: `${pct}%`, background: s.color, borderRadius: 2, transition: "width 0.5s" }} />
-                  </div>
-                  <div style={{ fontSize: 11, color: s.color, marginTop: 5, fontWeight: 600 }}>{pct > 0 ? `${pct}% quiz done` : "Not started"}</div>
+        {/* Section Grid */}
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "50px 40px" }}>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, marginBottom: 8, color: "#fff" }}>Course Modules</h2>
+          <p style={{ fontFamily: "'Source Sans 3', sans-serif", color: "#64748b", marginBottom: 36, fontSize: 15 }}>7 modules · 23 topics · 35 quiz questions per section · 30-question mock test</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 20 }}>
+            {SECTIONS.map((s) => (
+              <div key={s.id} className="card-hover" onClick={() => { setActiveSection(s.id); setActiveTopic(0); setView("learn"); }}
+                style={{ background: "linear-gradient(135deg, #0d1b2a, #111827)", border: `1px solid ${s.color}30`, borderRadius: 12, padding: 24, position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: s.color }} />
+                <div style={{ fontSize: 36, marginBottom: 12 }}>{s.icon}</div>
+                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: "#fff", marginBottom: 8, lineHeight: 1.3 }}>{s.title}</h3>
+                <p style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, color: "#64748b", marginBottom: 16 }}>{s.topics.length} topics · {(QUIZ_QUESTIONS[s.id] || []).length} quiz questions</p>
+                <div style={{ height: 4, background: "#1e293b", borderRadius: 2 }}>
+                  <div style={{ height: "100%", width: `${sectionProgress(s.id)}%`, background: s.color, borderRadius: 2, transition: "width 0.5s" }} />
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Quick actions */}
-          <div className="action-grid">
-            {[
-              { icon: "🃏", label: "Flashcard Revision", sub: `${allFlashcards.length} cards across all topics`, action: () => { setFlashSectionId(null); setFlashIdx(0); setFlashFlipped(false); setView("flashcards"); } },
-              { icon: "⏱️", label: "Timed Mock Test", sub: "30 questions · 45 minutes", action: () => { setMockAnswers({}); setMockSubmitted(false); setMockTimer(45*60); setMockTimerRunning(false); setView("mock"); } },
-              { icon: "🔍", label: "Search Content", sub: "Search all 23 topics", action: () => setSearchOpen(true) },
-              { icon: "📋", label: "Topic Quizzes", sub: "5 questions per module", action: () => setView("quiz") },
-            ].map(q => (
-              <div key={q.label} className="card-lift" onClick={q.action}
-                style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 10, padding: "16px", cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                <div style={{ fontSize: 22, marginBottom: 6 }}>{q.icon}</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 2 }}>{q.label}</div>
-                <div style={{ fontSize: 12, color: T.muted }}>{q.sub}</div>
+                <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 12, color: s.color, marginTop: 6 }}>{sectionProgress(s.id)}% quiz complete</div>
               </div>
             ))}
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
-  // ── LEARN ─────────────────────────────────────────────────────────────────────
+  // ── LEARN ──
   if (view === "learn") {
-    const bookmarked = isBookmarked(activeSectionId, activeTopicIdx);
+    const section = activeSection ? SECTIONS.find(s => s.id === activeSection) : SECTIONS[0];
+    const topic = section.topics[activeTopic];
+
     return (
-      <div style={{ minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column" }}>
-        <style>{GLOBAL_STYLES}</style>
-        {/* Top bar */}
-        <div className="no-print" style={{ background: T.navy, height: 52, display: "flex", alignItems: "center", padding: "0 clamp(10px,3vw,16px)", gap: 6, position: "sticky", top: 0, zIndex: 35, flexShrink: 0, boxShadow: "0 2px 6px rgba(0,0,0,0.18)" }}>
-          <button className="burger-btn" onClick={() => setSidebarOpen(o => !o)}
-            style={{ width: 34, height: 34, background: "rgba(255,255,255,0.12)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 4, borderRadius: 6, border: "none", flexShrink: 0 }}>
-            <div className="burger-line" style={{ width: 16, height: 2, background: T.white }} />
-            <div className="burger-line" style={{ width: 16, height: 2, background: T.white, opacity: sidebarOpen ? 0 : 1 }} />
-            <div className="burger-line" style={{ width: 16, height: 2, background: T.white }} />
+      <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "'Georgia', serif", color: "#e8f4f8", display: "flex", flexDirection: "column" }}>
+        <style>{`
+          * { box-sizing: border-box; }
+          .nav-btn { cursor: pointer; border: none; outline: none; transition: all 0.2s; background: none; }
+          .nav-btn:hover { opacity: 0.8; }
+          .topic-btn { cursor: pointer; transition: all 0.15s; border: none; outline: none; }
+          .topic-btn:hover { background: rgba(0,180,216,0.1) !important; }
+          .section-tab { cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+          .section-tab:hover { opacity: 0.8; }
+        `}</style>
+
+        {/* Top Nav */}
+        <div style={{ background: "#08111C", borderBottom: "1px solid rgba(0,180,216,0.15)", padding: "12px 24px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <button className="nav-btn" onClick={() => setView("home")} style={{ color: "#94a3b8", fontFamily: "'Source Sans 3', sans-serif", fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
+            ← Home
           </button>
-          <button onClick={() => setView("home")} style={{ background: "rgba(255,255,255,0.1)", color: T.white, fontSize: 12, padding: "5px 8px", borderRadius: 5, border: "none", whiteSpace: "nowrap", flexShrink: 0 }}>← Home</button>
-          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 5, overflow: "hidden" }}>
-            <span style={{ fontSize: 14, flexShrink: 0 }}>{activeSection.icon}</span>
-            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.7)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{activeSection.title}</span>
+          <div style={{ width: 1, height: 20, background: "#1e293b" }} />
+          <div style={{ display: "flex", gap: 8, overflowX: "auto" }}>
+            {SECTIONS.map(s => (
+              <button key={s.id} className="section-tab" onClick={() => { setActiveSection(s.id); setActiveTopic(0); }}
+                style={{ padding: "6px 14px", borderRadius: 20, fontSize: 12, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600,
+                  background: activeSection === s.id ? s.color : "transparent",
+                  color: activeSection === s.id ? "#0a0f1e" : "#64748b",
+                  border: `1px solid ${activeSection === s.id ? s.color : "#1e293b"}` }}>
+                {s.icon} {s.title.split(" ")[0]}
+              </button>
+            ))}
           </div>
-          <button onClick={() => toggleBookmark(activeSectionId, activeTopicIdx)} title={bookmarked ? "Remove bookmark" : "Bookmark"}
-            style={{ background: "none", fontSize: 17, padding: "0 3px", border: "none", filter: bookmarked ? "none" : "grayscale(1) opacity(0.5)", flexShrink: 0 }}>🔖</button>
-          <button onClick={exportPDF} title="Export PDF"
-            style={{ padding: "5px 8px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}>⬇ PDF</button>
-          <button onClick={() => { setQuizSectionId(activeSection.id); setQuizAnswers({}); setQuizSubmitted(false); setView("quiz"); }}
-            style={{ padding: "5px 10px", background: T.white, color: T.navy, border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 }}>Quiz →</button>
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+            <button className="nav-btn" onClick={() => { setQuizSection(section.id); setQuizAnswers({}); setQuizSubmitted(false); setView("quiz"); }}
+              style={{ padding: "7px 16px", background: `${section.color}20`, color: section.color, border: `1px solid ${section.color}40`, borderRadius: 6, fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, fontWeight: 600 }}>
+              Quiz this section →
+            </button>
+          </div>
         </div>
 
-        <div style={{ display: "flex", flex: 1, overflow: "hidden", position: "relative" }}>
-          <div className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(false)} />
-
+        <div style={{ display: "flex", flex: 1 }}>
           {/* Sidebar */}
-          <div className={`desktop-sidebar ${sidebarOpen ? "open" : ""}`}
-            style={{ background: T.white, borderRight: `1px solid ${T.border}`, overflowY: "auto", flexShrink: 0 }}>
-            {SECTIONS.map(sec => (
-              <div key={sec.id}>
-                <div style={{ padding: "10px 13px 6px", borderTop: `1px solid ${T.border}`, background: T.bgAlt, display: "flex", alignItems: "center", gap: 7 }}>
-                  <span style={{ fontSize: 13 }}>{sec.icon}</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: sec.id === activeSectionId ? sec.color : T.muted, letterSpacing: 1, textTransform: "uppercase" }}>{sec.title}</span>
-                </div>
-                {sec.topics.map((t, ti) => {
-                  const isActive = sec.id === activeSectionId && ti === activeTopicIdx;
-                  const bm = isBookmarked(sec.id, ti);
-                  return (
-                    <button key={ti} className="topic-item" onClick={() => goToLearn(sec.id, ti)}
-                      style={{ width: "100%", textAlign: "left", padding: "9px 12px 9px 24px", background: isActive ? `${sec.color}0d` : "transparent", borderLeft: `3px solid ${isActive ? sec.color : "transparent"}`, border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 12, color: isActive ? T.text : T.slateLt, lineHeight: 1.4, flex: 1, fontWeight: isActive ? 600 : 400 }}>{t.title}</span>
-                      {bm && <span style={{ fontSize: 10 }}>🔖</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            ))}
-            <div style={{ padding: 12, borderTop: `1px solid ${T.border}` }}>
-              <button onClick={() => { setQuizSectionId(activeSection.id); setQuizAnswers({}); setQuizSubmitted(false); setView("quiz"); }}
-                style={{ width: "100%", padding: 9, background: activeSection.color, color: T.white, border: "none", borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: "pointer", marginBottom: 6 }}>
-                Quiz: {activeSection.title.replace("Data Centre ", "")} →
-              </button>
-              <button onClick={() => { setFlashSectionId(activeSection.id); setFlashIdx(0); setFlashFlipped(false); setView("flashcards"); }}
-                style={{ width: "100%", padding: 9, background: T.bgAlt, color: T.slate, border: `1px solid ${T.border}`, borderRadius: 7, fontSize: 12, cursor: "pointer" }}>
-                🃏 Flashcards: {activeSection.title.replace("Data Centre ", "")}
-              </button>
+          <div style={{ width: 240, minWidth: 240, background: "#08111C", borderRight: "1px solid rgba(0,180,216,0.1)", padding: "20px 0" }}>
+            <div style={{ padding: "0 16px 16px", borderBottom: "1px solid #1e293b" }}>
+              <div style={{ fontSize: 24, marginBottom: 6 }}>{section.icon}</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, color: "#fff", lineHeight: 1.3 }}>{section.title}</div>
             </div>
+            {section.topics.map((t, i) => (
+              <button key={i} className="topic-btn" onClick={() => setActiveTopic(i)}
+                style={{ width: "100%", textAlign: "left", padding: "12px 16px", display: "flex", alignItems: "flex-start", gap: 10,
+                  background: activeTopic === i ? `${section.color}15` : "transparent",
+                  borderLeft: activeTopic === i ? `3px solid ${section.color}` : "3px solid transparent" }}>
+                <span style={{ color: activeTopic === i ? section.color : "#475569", fontSize: 13, marginTop: 1 }}>{i + 1}.</span>
+                <span style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, color: activeTopic === i ? "#e8f4f8" : "#94a3b8", lineHeight: 1.4 }}>{t.title}</span>
+              </button>
+            ))}
           </div>
 
           {/* Content */}
-          <div ref={contentRef} style={{ flex: 1, minWidth: 0, overflowY: "auto", padding: "clamp(14px,3.5vw,36px) clamp(14px,3.5vw,36px)", background: T.bg }}>
-            <div style={{ maxWidth: 730, margin: "0 auto" }} className="fade-in">
-              {/* Title */}
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 11, marginBottom: 22, paddingBottom: 18, borderBottom: `2px solid ${T.border}` }}>
-                <div style={{ width: 4, minHeight: 44, background: activeSection.color, borderRadius: 2, flexShrink: 0, marginTop: 2 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, color: activeSection.color, letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 5 }}>{activeSection.icon} {activeSection.title}</div>
-                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(18px,3.5vw,25px)", color: T.text, lineHeight: 1.25, wordBreak: "break-word" }}>{activeTopic.title}</h2>
+          <div style={{ flex: 1, overflowY: "auto", padding: "40px" }}>
+            <div style={{ maxWidth: 780 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
+                <div style={{ width: 4, height: 40, background: section.color, borderRadius: 2 }} />
+                <div>
+                  <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 11, color: section.color, letterSpacing: 3, textTransform: "uppercase", fontWeight: 600, marginBottom: 4 }}>{section.title}</div>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, color: "#fff", lineHeight: 1.2 }}>{topic.title}</h2>
                 </div>
-                <button onClick={() => toggleBookmark(activeSectionId, activeTopicIdx)} className="no-print"
-                  style={{ background: "none", fontSize: 19, border: "none", cursor: "pointer", filter: bookmarked ? "none" : "grayscale(1) opacity(0.4)", flexShrink: 0, marginTop: 2 }}>🔖</button>
               </div>
 
-              {/* Body */}
-              <div style={{ background: T.white, borderRadius: 10, padding: "clamp(14px,3.5vw,26px)", marginBottom: 14, border: `1px solid ${T.border}`, lineHeight: 1.85, fontSize: "clamp(13px,2vw,15px)", color: T.slate, boxShadow: "0 1px 4px rgba(0,0,0,0.04)", wordBreak: "break-word" }}>
-                {activeTopic.content.split("\n\n").map((para, i, arr) => (
-                  <p key={i} style={{ marginBottom: i < arr.length - 1 ? 15 : 0 }}
-                    dangerouslySetInnerHTML={{ __html: renderMd(para, activeSection.color) }} />
+              {/* Main content */}
+              <div style={{ background: "#0d1b2a", borderRadius: 12, padding: 28, marginBottom: 20, border: "1px solid rgba(0,180,216,0.1)", lineHeight: 1.8, fontFamily: "'Source Sans 3', sans-serif", fontSize: 15, color: "#cbd5e1" }}>
+                {topic.content.split("\n\n").map((para, i) => (
+                  <p key={i} style={{ marginBottom: i < topic.content.split("\n\n").length - 1 ? 18 : 0 }}
+                    dangerouslySetInnerHTML={{ __html: para.replace(/\*\*(.*?)\*\*/g, `<strong style="color:#e8f4f8">$1</strong>`) }} />
                 ))}
               </div>
 
-              {/* Example */}
-              <div style={{ background: `${activeSection.color}08`, border: `1px solid ${activeSection.color}22`, borderRadius: 10, padding: "clamp(12px,3vw,20px)", marginBottom: 14 }}>
-                <div style={{ fontSize: 10, color: activeSection.color, letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 8 }}>Real-World Example</div>
-                <p style={{ fontSize: "clamp(13px,2vw,14px)", color: T.slate, lineHeight: 1.8, wordBreak: "break-word" }}
-                  dangerouslySetInnerHTML={{ __html: renderMd(activeTopic.example, activeSection.color) }} />
+              {/* Example box */}
+              <div style={{ background: `linear-gradient(135deg, ${section.color}12, ${section.color}06)`, border: `1px solid ${section.color}30`, borderRadius: 12, padding: 24, marginBottom: 24 }}>
+                <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 11, color: section.color, letterSpacing: 3, textTransform: "uppercase", fontWeight: 700, marginBottom: 12 }}>Real-World Example</div>
+                <p style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 15, color: "#cbd5e1", lineHeight: 1.8 }}
+                  dangerouslySetInnerHTML={{ __html: topic.example.replace(/\*\*(.*?)\*\*/g, `<strong style="color:${section.color}">$1</strong>`) }} />
               </div>
 
-              {/* Key Points */}
-              <div style={{ background: T.bgAlt, borderRadius: 10, padding: "clamp(12px,3vw,20px)", marginBottom: 26, border: `1px solid ${T.border}` }}>
-                <div style={{ fontSize: 10, color: T.muted, letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 11 }}>Key Points</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {activeTopic.keyPoints.map((kp, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: activeSection.color, marginTop: 6, flexShrink: 0 }} />
-                      <span style={{ fontSize: "clamp(12px,1.8vw,13px)", color: T.textSm, lineHeight: 1.6 }}>{kp}</span>
+              {/* Key points */}
+              <div style={{ background: "#08111C", borderRadius: 12, padding: 24, border: "1px solid #1e293b" }}>
+                <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 11, color: "#94a3b8", letterSpacing: 3, textTransform: "uppercase", fontWeight: 700, marginBottom: 16 }}>Key Points to Remember</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {topic.keyPoints.map((kp, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: section.color, marginTop: 7, flexShrink: 0 }} />
+                      <span style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 14, color: "#94a3b8", lineHeight: 1.5 }}
+                        dangerouslySetInnerHTML={{ __html: kp.replace(/\*\*(.*?)\*\*/g, `<strong style="color:#e8f4f8">$1</strong>`) }} />
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Nav */}
-              <div className="no-print" style={{ display: "flex", justifyContent: "space-between", gap: 8, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
+              {/* Navigation */}
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 36, paddingTop: 24, borderTop: "1px solid #1e293b" }}>
                 <button onClick={() => {
-                  if (activeTopicIdx > 0) goToLearn(activeSectionId, activeTopicIdx - 1);
-                  else { const idx = SECTIONS.findIndex(s => s.id === activeSectionId); if (idx > 0) goToLearn(SECTIONS[idx-1].id, SECTIONS[idx-1].topics.length - 1); }
-                }} style={{ padding: "9px 14px", background: T.white, color: T.slateLt, borderRadius: 7, border: `1px solid ${T.border}`, fontSize: 13, flexShrink: 0 }}>← Prev</button>
+                  if (activeTopic > 0) setActiveTopic(activeTopic - 1);
+                  else {
+                    const idx = SECTIONS.findIndex(s => s.id === section.id);
+                    if (idx > 0) { setActiveSection(SECTIONS[idx-1].id); setActiveTopic(SECTIONS[idx-1].topics.length - 1); }
+                  }
+                }} style={{ padding: "10px 20px", background: "#1e293b", color: "#94a3b8", borderRadius: 8, cursor: "pointer", border: "none", fontFamily: "'Source Sans 3', sans-serif", fontSize: 14 }}>
+                  ← Previous
+                </button>
                 <button onClick={() => {
-                  if (activeTopicIdx < activeSection.topics.length - 1) goToLearn(activeSectionId, activeTopicIdx + 1);
-                  else { const idx = SECTIONS.findIndex(s => s.id === activeSectionId); if (idx < SECTIONS.length - 1) goToLearn(SECTIONS[idx+1].id, 0); else { setQuizSectionId(activeSectionId); setQuizAnswers({}); setQuizSubmitted(false); setView("quiz"); } }
-                }} style={{ padding: "9px 18px", background: activeSection.color, color: T.white, borderRadius: 7, border: "none", fontSize: 13, fontWeight: 700 }}>
-                  {activeTopicIdx < activeSection.topics.length - 1 ? "Next Topic →" : "Take Quiz →"}
+                  if (activeTopic < section.topics.length - 1) setActiveTopic(activeTopic + 1);
+                  else {
+                    const idx = SECTIONS.findIndex(s => s.id === section.id);
+                    if (idx < SECTIONS.length - 1) { setActiveSection(SECTIONS[idx+1].id); setActiveTopic(0); }
+                    else { setQuizSection(section.id); setQuizAnswers({}); setQuizSubmitted(false); setView("quiz"); }
+                  }
+                }} style={{ padding: "10px 20px", background: section.color, color: "#0a0f1e", borderRadius: 8, cursor: "pointer", border: "none", fontFamily: "'Source Sans 3', sans-serif", fontSize: 14, fontWeight: 700 }}>
+                  {activeTopic < section.topics.length - 1 ? "Next Topic →" : "Take Quiz →"}
                 </button>
               </div>
             </div>
@@ -1302,154 +554,99 @@ export default function App() {
     );
   }
 
-  // ── FLASHCARDS ────────────────────────────────────────────────────────────────
-  if (view === "flashcards") {
-    const card = flashCards[flashIdx] || flashCards[0];
-    const total = flashCards.length;
-    if (!card) return <div style={{ padding: 40, textAlign: "center" }}>No cards available.</div>;
+  // ── QUIZ SELECTOR ──
+  if (view === "quiz" && !quizSection) {
     return (
-      <div style={{ minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column" }}>
-        <style>{GLOBAL_STYLES}</style>
-        <NavBar onHome={() => setView("home")} extra={
-          <>
-            <select value={flashSectionId || ""} onChange={e => { setFlashSectionId(e.target.value || null); setFlashIdx(0); setFlashFlipped(false); }}
-              style={{ padding: "5px 8px", border: `1px solid rgba(255,255,255,0.25)`, borderRadius: 6, background: "rgba(255,255,255,0.1)", color: T.white, fontSize: 11, fontFamily: "'DM Sans', sans-serif", maxWidth: "38vw" }}>
-              <option value="" style={{ color: T.text, background: T.white }}>All Sections</option>
-              {SECTIONS.map(s => <option key={s.id} value={s.id} style={{ color: T.text, background: T.white }}>{s.title.replace("Data Centre ", "")}</option>)}
-            </select>
-            <button onClick={() => setView("home")} style={{ padding: "5px 10px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 12, whiteSpace: "nowrap" }}>← Home</button>
-          </>
-        } />
-
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "clamp(18px,4vw,44px) clamp(14px,4vw,24px)" }}>
-          {/* Progress */}
-          <div style={{ width: "100%", maxWidth: 560, marginBottom: 18 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
-              <span style={{ fontSize: 12, color: T.muted, fontWeight: 600 }}>Card {flashIdx + 1} of {total}</span>
-              <span style={{ fontSize: 11, color: card.sectionColor, fontWeight: 600 }}>{card.sectionIcon} {card.sectionTitle.replace("Data Centre ", "")}</span>
-            </div>
-            <div style={{ height: 4, background: T.border, borderRadius: 2 }}>
-              <div style={{ height: "100%", width: `${((flashIdx + 1) / total) * 100}%`, background: card.sectionColor, borderRadius: 2, transition: "width 0.3s" }} />
-            </div>
-          </div>
-
-          {/* Card */}
-          <div className="flash-card" style={{ cursor: "pointer", marginBottom: 20, width: "100%" }} onClick={() => setFlashFlipped(f => !f)}>
-            <div className={`flash-inner ${flashFlipped ? "flipped" : ""}`}>
-              {/* Front */}
-              <div className="flash-front" style={{ background: T.navy, boxShadow: "0 8px 32px rgba(30,58,95,0.18)" }}>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 600, marginBottom: 16 }}>Topic</div>
-                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(15px,3vw,19px)", color: T.white, textAlign: "center", lineHeight: 1.5 }}>{card.front}</p>
-                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 16 }}>Tap to reveal key point</p>
+      <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "'Georgia', serif", color: "#e8f4f8", padding: 40 }}>
+        <style>{`* { box-sizing: border-box; } .card-hover { transition: transform 0.2s; cursor: pointer; } .card-hover:hover { transform: translateY(-3px); }`}</style>
+        <button onClick={() => setView("home")} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontFamily: "'Source Sans 3', sans-serif", fontSize: 14, marginBottom: 32 }}>← Home</button>
+        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, marginBottom: 8, color: "#fff" }}>Topic Quizzes</h1>
+          <p style={{ fontFamily: "'Source Sans 3', sans-serif", color: "#64748b", marginBottom: 40, fontSize: 15 }}>Select a section to test your knowledge — 5 questions per module</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
+            {SECTIONS.map(s => (
+              <div key={s.id} className="card-hover" onClick={() => { setQuizSection(s.id); setQuizAnswers({}); setQuizSubmitted(false); setShowExplanation({}); }}
+                style={{ background: "#0d1b2a", border: `1px solid ${s.color}30`, borderRadius: 12, padding: 24, cursor: "pointer" }}>
+                <div style={{ fontSize: 32, marginBottom: 10 }}>{s.icon}</div>
+                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 17, color: "#fff", marginBottom: 8 }}>{s.title}</h3>
+                <p style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, color: "#64748b", marginBottom: 16 }}>{(QUIZ_QUESTIONS[s.id] || []).length} questions</p>
+                <div style={{ display: "inline-block", padding: "6px 14px", background: `${s.color}20`, color: s.color, borderRadius: 20, fontSize: 13, fontFamily: "'Source Sans 3', sans-serif", fontWeight: 600 }}>Start Quiz →</div>
               </div>
-              {/* Back */}
-              <div className="flash-back" style={{ background: T.white, border: `2px solid ${card.sectionColor}`, boxShadow: "0 8px 32px rgba(30,58,95,0.1)" }}>
-                <div style={{ fontSize: 10, color: card.sectionColor, letterSpacing: 2.5, textTransform: "uppercase", fontWeight: 700, marginBottom: 14 }}>Key Point</div>
-                <p style={{ fontSize: "clamp(13px,2.5vw,16px)", color: T.text, textAlign: "center", lineHeight: 1.7, fontWeight: 500 }}>{card.back}</p>
-              </div>
-            </div>
+            ))}
           </div>
-
-          {/* Controls */}
-          <div className="flash-controls">
-            <button onClick={() => { setFlashIdx(i => Math.max(0, i - 1)); setFlashFlipped(false); }}
-              disabled={flashIdx === 0}
-              style={{ padding: "9px 18px", background: T.white, color: flashIdx === 0 ? T.muted : T.slate, border: `1px solid ${T.border}`, borderRadius: 7, fontSize: 13, cursor: flashIdx === 0 ? "not-allowed" : "pointer" }}>← Prev</button>
-            <button onClick={() => setFlashFlipped(f => !f)}
-              style={{ padding: "9px 18px", background: T.bgAlt, color: T.navy, border: `1px solid ${T.border}`, borderRadius: 7, fontSize: 13, fontWeight: 600 }}>Flip</button>
-            <button onClick={() => { setFlashIdx(i => Math.min(total - 1, i + 1)); setFlashFlipped(false); }}
-              disabled={flashIdx === total - 1}
-              style={{ padding: "9px 18px", background: flashIdx < total - 1 ? T.navy : T.bgAlt, color: flashIdx < total - 1 ? T.white : T.muted, border: "none", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: flashIdx === total - 1 ? "not-allowed" : "pointer" }}>Next →</button>
-          </div>
-          <button onClick={() => { setFlashIdx(Math.floor(Math.random() * total)); setFlashFlipped(false); }}
-            style={{ marginTop: 10, padding: "7px 14px", background: "none", color: T.slateLt, border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, cursor: "pointer" }}>🔀 Shuffle</button>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  // ── QUIZ SELECT ────────────────────────────────────────────────────────────────
-  if (view === "quiz" && !quizSectionId) {
-    return (
-      <div style={{ minHeight: "100vh", background: T.bg }}>
-        <style>{GLOBAL_STYLES}</style>
-        <NavBar onHome={() => setView("home")} extra={
-          <button onClick={() => setView("home")} style={{ padding: "6px 12px", background: "rgba(255,255,255,0.1)", color: T.white, border: "1px solid rgba(255,255,255,0.2)", borderRadius: 6, fontSize: 13 }}>← Home</button>
-        } />
-        <div style={{ maxWidth: 900, margin: "0 auto", padding: "clamp(20px,4vw,44px) clamp(14px,4vw,28px)" }}>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(20px,4vw,28px)", color: T.text, marginBottom: 8 }}>Topic Quizzes</h2>
-          <p style={{ fontSize: 13, color: T.slateLt, marginBottom: 24 }}>5 questions per module with full explanations after submission.</p>
-          <div className="quiz-grid">
-            {SECTIONS.map((s, i) => {
-              const done = Object.keys(progress).filter(k => k.startsWith(s.id + "-")).length;
-              const total = (QUIZ_QUESTIONS[s.id] || []).length;
-              const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-              return (
-                <div key={s.id} className="card-lift fade-in" onClick={() => { setQuizSectionId(s.id); setQuizAnswers({}); setQuizSubmitted(false); }}
-                  style={{ animationDelay: `${i * 0.04}s`, background: T.card, border: `1px solid ${T.border}`, borderTop: `3px solid ${s.color}`, borderRadius: 10, padding: 18, cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                  <div style={{ fontSize: 24, marginBottom: 8 }}>{s.icon}</div>
-                  <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, color: T.text, marginBottom: 5 }}>{s.title}</h3>
-                  <p style={{ fontSize: 11, color: T.muted, marginBottom: 10 }}>{total} questions · {done} correct</p>
-                  <div style={{ height: 3, background: T.bgAlt, borderRadius: 2, marginBottom: 6 }}>
-                    <div style={{ height: "100%", width: `${pct}%`, background: s.color, borderRadius: 2 }} />
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: s.color }}>Start →</span>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{ textAlign: "center", marginTop: 36 }}>
-            <button className="card-lift" onClick={() => { setMockAnswers({}); setMockSubmitted(false); setMockTimer(45*60); setMockTimerRunning(false); setView("mock"); }}
-              style={{ padding: "12px 32px", background: T.navy, color: T.white, borderRadius: 8, border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-              Take Full Mock Test (30 Qs · 45 min) →
+          <div style={{ marginTop: 40, textAlign: "center" }}>
+            <button onClick={() => { setMockAnswers({}); setMockSubmitted(false); setView("mock"); }}
+              style={{ padding: "14px 40px", background: "#F0A500", color: "#0a0f1e", borderRadius: 8, cursor: "pointer", border: "none", fontFamily: "'Source Sans 3', sans-serif", fontSize: 16, fontWeight: 700 }}>
+              📝 Take Full Mock Test (30 Questions) →
             </button>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
 
-  // ── QUIZ ───────────────────────────────────────────────────────────────────────
-  if (view === "quiz" && quizSectionId && quizSection) {
-    const answered = Object.keys(quizAnswers).length;
-    const score = quizSubmitted ? quizQs.filter((q, i) => quizAnswers[i] === q.answer).length : 0;
-    const pct = quizSubmitted ? Math.round((score / quizQs.length) * 100) : 0;
+  // ── QUIZ ──
+  if (view === "quiz" && quizSection) {
+    const section = SECTIONS.find(s => s.id === quizSection);
+    const questions = QUIZ_QUESTIONS[quizSection] || [];
+    const totalAnswered = Object.keys(quizAnswers).length;
+    const score = quizSubmitted ? questions.filter((q, i) => quizAnswers[i] === q.answer).length : 0;
+
     return (
-      <div style={{ minHeight: "100vh", background: T.bg, paddingBottom: 40 }}>
-        <style>{GLOBAL_STYLES}</style>
-        <div className="no-print" style={{ background: T.navy, height: 52, display: "flex", alignItems: "center", padding: "0 16px", gap: 10, position: "sticky", top: 0, zIndex: 30, boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}>
-          <button onClick={() => setQuizSectionId(null)} style={{ background: "rgba(255,255,255,0.1)", color: T.white, fontSize: 12, padding: "5px 9px", borderRadius: 5, border: "none" }}>← Quizzes</button>
-          <span style={{ fontSize: 14 }}>{quizSection.icon}</span>
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 14, color: "rgba(255,255,255,0.9)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{quizSection.title}</span>
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", whiteSpace: "nowrap" }}>{answered}/{quizQs.length}</span>
-        </div>
-        <div style={{ maxWidth: 700, margin: "0 auto", padding: "clamp(14px,4vw,32px) clamp(12px,4vw,22px)" }}>
-          {quizQs.map((q, qi) => {
+      <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "'Georgia', serif", color: "#e8f4f8", padding: "40px 24px" }}>
+        <style>{`* { box-sizing: border-box; } .opt-btn { cursor: pointer; transition: all 0.15s; border: none; outline: none; width: 100%; text-align: left; }`}</style>
+        <div style={{ maxWidth: 740, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 36 }}>
+            <button onClick={() => { setQuizSection(null); }} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontFamily: "'Source Sans 3', sans-serif", fontSize: 14 }}>← Quizzes</button>
+            <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 12, color: section.color, letterSpacing: 2, textTransform: "uppercase", fontWeight: 700 }}>{section.icon} {section.title}</div>
+          </div>
+
+          {quizSubmitted && (
+            <div style={{ background: score >= 4 ? "rgba(34,197,94,0.1)" : score >= 3 ? "rgba(240,165,0,0.1)" : "rgba(239,68,68,0.1)",
+              border: `1px solid ${score >= 4 ? "#22C55E" : score >= 3 ? "#F0A500" : "#EF4444"}40`,
+              borderRadius: 12, padding: 24, marginBottom: 36, textAlign: "center" }}>
+              <div style={{ fontSize: 48, marginBottom: 8 }}>{score >= 4 ? "🎉" : score >= 3 ? "👍" : "📖"}</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 28, color: "#fff", marginBottom: 8 }}>{score} / {questions.length}</div>
+              <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 15, color: "#94a3b8" }}>
+                {score >= 4 ? "Excellent! You've mastered this section." : score >= 3 ? "Good effort — review the explanations below." : "Keep studying — review the topics and try again."}
+              </div>
+              <div style={{ display: "flex", gap: 12, justifyContent: "center", marginTop: 20, flexWrap: "wrap" }}>
+                <button onClick={() => { setQuizAnswers({}); setQuizSubmitted(false); setShowExplanation({}); }}
+                  style={{ padding: "10px 24px", background: section.color, color: "#0a0f1e", borderRadius: 8, cursor: "pointer", border: "none", fontFamily: "'Source Sans 3', sans-serif", fontWeight: 700, fontSize: 14 }}>
+                  Retry Quiz
+                </button>
+                <button onClick={() => { setActiveSection(quizSection); setActiveTopic(0); setView("learn"); }}
+                  style={{ padding: "10px 24px", background: "#1e293b", color: "#94a3b8", borderRadius: 8, cursor: "pointer", border: "none", fontFamily: "'Source Sans 3', sans-serif", fontSize: 14 }}>
+                  Review Topics
+                </button>
+              </div>
+            </div>
+          )}
+
+          {questions.map((q, qi) => {
+            const answered = quizAnswers[qi] !== undefined;
             const isCorrect = quizAnswers[qi] === q.answer;
             return (
-              <div key={qi} className="fade-in" style={{ animationDelay: `${qi * 0.03}s`, background: T.white, borderRadius: 10, padding: "clamp(14px,3vw,20px)", marginBottom: 14,
-                border: quizSubmitted ? `1px solid ${isCorrect ? "#16a34a40" : "#dc262640"}` : `1px solid ${T.border}`, boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
-                <div style={{ display: "flex", gap: 9, marginBottom: 12 }}>
-                  <div style={{ width: 24, height: 24, borderRadius: "50%", background: `${quizSection.color}15`, color: quizSection.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{qi + 1}</div>
-                  <p style={{ fontSize: "clamp(13px,2vw,15px)", color: T.text, lineHeight: 1.55, fontWeight: 500 }}>{q.q}</p>
+              <div key={qi} style={{ background: "#0d1b2a", borderRadius: 12, padding: 24, marginBottom: 20, border: quizSubmitted ? `1px solid ${isCorrect ? "#22C55E40" : "#EF444440"}` : "1px solid #1e293b" }}>
+                <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+                  <div style={{ background: `${section.color}20`, color: section.color, width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, fontWeight: 700, flexShrink: 0 }}>{qi + 1}</div>
+                  <p style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 15, color: "#e8f4f8", lineHeight: 1.5 }}>{q.q}</p>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {q.options.map((opt, oi) => {
-                    let bg = T.bgAlt, border = T.border, col = T.slate;
-                    if (!quizSubmitted && quizAnswers[qi] === oi) { bg = `${quizSection.color}10`; border = quizSection.color; col = T.text; }
+                    let bg = "#08111C", border = "#1e293b", textColor = "#94a3b8";
+                    if (answered && !quizSubmitted) { bg = quizAnswers[qi] === oi ? `${section.color}20` : "#08111C"; border = quizAnswers[qi] === oi ? section.color : "#1e293b"; textColor = quizAnswers[qi] === oi ? "#fff" : "#94a3b8"; }
                     if (quizSubmitted) {
-                      if (oi === q.answer) { bg = "#f0fdf4"; border = "#16a34a"; col = T.text; }
-                      else if (quizAnswers[qi] === oi) { bg = "#fef2f2"; border = "#dc2626"; col = T.text; }
-                      else { bg = T.bgAlt; col = T.muted; }
+                      if (oi === q.answer) { bg = "rgba(34,197,94,0.15)"; border = "#22C55E"; textColor = "#e8f4f8"; }
+                      else if (quizAnswers[qi] === oi) { bg = "rgba(239,68,68,0.15)"; border = "#EF4444"; textColor = "#e8f4f8"; }
+                      else { bg = "#08111C"; border = "#1e293b"; textColor = "#64748b"; }
                     }
                     return (
                       <button key={oi} className="opt-btn" disabled={quizSubmitted}
-                        onClick={() => { if (!quizSubmitted) { const a = { ...quizAnswers, [qi]: oi }; setQuizAnswers(a); if (oi === q.answer) setProgress(p => ({ ...p, [`${quizSectionId}-${qi}`]: true })); }}}
-                        style={{ padding: "9px 12px", background: bg, border: `1px solid ${border}`, borderRadius: 7, color: col, fontSize: "clamp(12px,1.8vw,14px)", display: "flex", alignItems: "center", gap: 8, textAlign: "left", cursor: quizSubmitted ? "default" : "pointer" }}>
-                        <span style={{ width: 18, height: 18, borderRadius: "50%", border: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, flexShrink: 0, fontWeight: 700 }}>
-                          {quizSubmitted ? (oi === q.answer ? "✓" : quizAnswers[qi] === oi ? "✗" : String.fromCharCode(65+oi)) : String.fromCharCode(65+oi)}
+                        onClick={() => { if (!quizSubmitted) { const a = { ...quizAnswers, [qi]: oi }; setQuizAnswers(a); setProgress(p => ({ ...p, [`${quizSection}-${qi}`]: oi === q.answer })); } }}
+                        style={{ padding: "12px 16px", background: bg, border: `1px solid ${border}`, borderRadius: 8, color: textColor, fontFamily: "'Source Sans 3', sans-serif", fontSize: 14, display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ width: 22, height: 22, borderRadius: "50%", border: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, flexShrink: 0 }}>
+                          {quizSubmitted ? (oi === q.answer ? "✓" : quizAnswers[qi] === oi ? "✗" : String.fromCharCode(65 + oi)) : String.fromCharCode(65 + oi)}
                         </span>
                         {opt}
                       </button>
@@ -1457,111 +654,128 @@ export default function App() {
                   })}
                 </div>
                 {quizSubmitted && (
-                  <div style={{ marginTop: 10, padding: "10px 12px", background: "#f0f9ff", borderRadius: 7, border: "1px solid #bae6fd" }}>
-                    <span style={{ fontSize: 13, color: T.slateLt }}><strong style={{ color: T.navy }}>Explanation: </strong>{q.explanation}</span>
+                  <div style={{ marginTop: 14, padding: 14, background: "rgba(0,180,216,0.08)", borderRadius: 8, border: "1px solid rgba(0,180,216,0.2)" }}>
+                    <span style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 13, color: "#94a3b8" }}>
+                      <strong style={{ color: "#00B4D8" }}>Explanation: </strong>{q.explanation}
+                    </span>
                   </div>
                 )}
               </div>
             );
           })}
 
-          {!quizSubmitted && (
-            <button disabled={answered < quizQs.length} onClick={() => setQuizSubmitted(true)}
-              style={{ width: "100%", padding: 13, background: answered === quizQs.length ? quizSection.color : T.bgAlt, color: answered === quizQs.length ? T.white : T.muted, borderRadius: 9, border: `1px solid ${answered === quizQs.length ? quizSection.color : T.border}`, fontSize: 14, fontWeight: 700, cursor: answered === quizQs.length ? "pointer" : "not-allowed", marginTop: 4 }}>
-              {answered < quizQs.length ? `Answer all ${quizQs.length} questions (${answered} done)` : "Submit Answers →"}
+          {!quizSubmitted && totalAnswered === questions.length && (
+            <button onClick={() => setQuizSubmitted(true)}
+              style={{ width: "100%", padding: "16px", background: section.color, color: "#0a0f1e", borderRadius: 10, cursor: "pointer", border: "none", fontFamily: "'Source Sans 3', sans-serif", fontSize: 16, fontWeight: 700, marginTop: 8 }}>
+              Submit Answers →
             </button>
           )}
-
-          {/* Results at bottom */}
-          {quizSubmitted && (
-            <div className="fade-in" style={{ marginTop: 20, background: pct >= 80 ? "#f0fdf4" : pct >= 60 ? "#fffbeb" : "#fef2f2", border: `1px solid ${pct >= 80 ? "#16a34a" : pct >= 60 ? "#d97706" : "#dc2626"}40`, borderRadius: 12, padding: "clamp(16px,4vw,24px)", textAlign: "center" }}>
-              <div style={{ fontSize: 36, marginBottom: 6 }}>{pct >= 80 ? "🎉" : pct >= 60 ? "👍" : "📖"}</div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(26px,5vw,34px)", color: T.text, marginBottom: 3 }}>{score} / {quizQs.length}</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: pct >= 80 ? T.success : pct >= 60 ? T.warning : T.danger, marginBottom: 5 }}>{pct}%</div>
-              <div style={{ fontSize: 13, color: T.slateLt, marginBottom: 18 }}>
-                {pct >= 80 ? "Excellent — you've mastered this module!" : pct >= 60 ? "Good — review the explanations above." : "Keep studying — revisit the topics and retry."}
-              </div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
-                <button onClick={() => { setQuizAnswers({}); setQuizSubmitted(false); window.scrollTo(0,0); }}
-                  style={{ padding: "9px 20px", background: quizSection.color, color: T.white, borderRadius: 7, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Retry</button>
-                <button onClick={() => goToLearn(quizSectionId)}
-                  style={{ padding: "9px 18px", background: T.white, color: T.navy, borderRadius: 7, border: `1px solid ${T.border}`, fontSize: 13, cursor: "pointer" }}>Review Topics</button>
-                <button onClick={() => setQuizSectionId(null)}
-                  style={{ padding: "9px 18px", background: T.white, color: T.slate, borderRadius: 7, border: `1px solid ${T.border}`, fontSize: 13, cursor: "pointer" }}>All Quizzes</button>
-              </div>
-            </div>
+          {!quizSubmitted && totalAnswered < questions.length && (
+            <p style={{ textAlign: "center", color: "#64748b", fontFamily: "'Source Sans 3', sans-serif", fontSize: 14, marginTop: 16 }}>
+              Answer all {questions.length} questions to submit ({totalAnswered}/{questions.length} answered)
+            </p>
           )}
         </div>
       </div>
     );
   }
 
-  // ── MOCK TEST ──────────────────────────────────────────────────────────────────
+  // ── MOCK TEST ──
   if (view === "mock") {
-    const answered = Object.keys(mockAnswers).length;
-    const score = mockSubmitted ? MOCK_TEST.filter((q, i) => mockAnswers[i] === q.answer).length : 0;
-    const pct = mockSubmitted ? Math.round((score / MOCK_TEST.length) * 100) : 0;
-    const timerColor = mockTimer < 300 ? T.danger : mockTimer < 600 ? T.warning : T.navy;
-    const sectionBreakdown = mockSubmitted ? SECTIONS.map(s => {
-      const qs = MOCK_TEST.map((q, i) => ({ ...q, idx: i })).filter(q => q.section === s.id);
-      const correct = qs.filter(q => mockAnswers[q.idx] === q.answer).length;
+    const totalAnswered = Object.keys(mockAnswers).length;
+    const score = mockSubmitted ? MOCK_TEST_QUESTIONS.filter((q, i) => mockAnswers[i] === q.answer).length : 0;
+    const pct = mockSubmitted ? Math.round((score / MOCK_TEST_QUESTIONS.length) * 100) : 0;
+
+    const sectionScores = mockSubmitted ? SECTIONS.map(s => {
+      const qs = MOCK_TEST_QUESTIONS.filter(q => q.section.toLowerCase().includes(s.id === "fundamentals" ? "fundamental" : s.id === "compliance" ? "compliance" : s.id === "infrastructure" ? "infrastructure" : s.id === "working" ? "working" : s.id === "maintenance" ? "maintenance" : s.id === "power" ? "power" : "cooling"));
+      const correct = qs.filter((q, _) => {
+        const idx = MOCK_TEST_QUESTIONS.indexOf(q);
+        return mockAnswers[idx] === q.answer;
+      }).length;
       return { ...s, correct, total: qs.length };
     }) : [];
 
     return (
-      <div style={{ minHeight: "100vh", background: T.bg, paddingBottom: 90 }}>
-        <style>{GLOBAL_STYLES}</style>
-        <div className="no-print" style={{ background: T.navy, height: 52, display: "flex", alignItems: "center", padding: "0 16px", gap: 10, position: "sticky", top: 0, zIndex: 30, boxShadow: "0 2px 6px rgba(0,0,0,0.15)" }}>
-          <button onClick={() => setView("home")} style={{ background: "rgba(255,255,255,0.1)", color: T.white, fontSize: 12, padding: "5px 9px", borderRadius: 5, border: "none" }}>← Home</button>
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 15, color: T.white, flex: 1 }}>Final Mock Exam</span>
-          {/* Timer */}
-          {!mockSubmitted && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {!mockTimerRunning ? (
-                <button onClick={() => setMockTimerRunning(true)}
-                  style={{ padding: "5px 12px", background: T.success, color: T.white, borderRadius: 6, border: "none", fontSize: 12, fontWeight: 700 }}>▶ Start Timer</button>
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(255,255,255,0.1)", padding: "4px 10px", borderRadius: 6 }}>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.6)" }}>⏱</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: mockTimer < 300 ? "#fca5a5" : T.white, fontFamily: "monospace" }}>{fmtTime(mockTimer)}</span>
+      <div style={{ minHeight: "100vh", background: "#0a0f1e", fontFamily: "'Georgia', serif", color: "#e8f4f8", padding: "40px 24px" }}>
+        <style>{`* { box-sizing: border-box; } .opt-btn { cursor: pointer; transition: all 0.15s; border: none; outline: none; width: 100%; text-align: left; }`}</style>
+        <div style={{ maxWidth: 800, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
+            <button onClick={() => setView("home")} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontFamily: "'Source Sans 3', sans-serif", fontSize: 14 }}>← Home</button>
+          </div>
+          <div style={{ marginBottom: 36 }}>
+            <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, color: "#fff", marginBottom: 6 }}>📝 Final Mock Examination</h1>
+            <p style={{ fontFamily: "'Source Sans 3', sans-serif", color: "#64748b", fontSize: 15 }}>30 questions across all 7 modules · Pass mark: 70% (21/30)</p>
+          </div>
+
+          {mockSubmitted && (
+            <div style={{ background: pct >= 70 ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)", border: `1px solid ${pct >= 70 ? "#22C55E" : "#EF4444"}40`, borderRadius: 16, padding: 32, marginBottom: 40 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", marginBottom: 24 }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 56, fontWeight: 900, color: pct >= 70 ? "#22C55E" : "#EF4444", lineHeight: 1 }}>{score}</div>
+                  <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 14, color: "#64748b" }}>out of {MOCK_TEST_QUESTIONS.length}</div>
                 </div>
-              )}
+                <div>
+                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, color: "#fff", marginBottom: 4 }}>{pct}%</div>
+                  <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 18, color: pct >= 70 ? "#22C55E" : "#EF4444", fontWeight: 700 }}>{pct >= 70 ? "✓ PASS" : "✗ FAIL"}</div>
+                  <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 14, color: "#64748b", marginTop: 4 }}>{pct >= 70 ? "Congratulations! You've passed the mock exam." : "Review the topics and try again."}</div>
+                </div>
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 12, color: "#64748b", letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Performance by Module</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10 }}>
+                  {sectionScores.map(s => (
+                    <div key={s.id} style={{ background: "#08111C", borderRadius: 8, padding: "10px 14px", border: `1px solid ${s.color}30` }}>
+                      <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 12, color: s.color, marginBottom: 4 }}>{s.icon} {s.title.replace("Data Centre ", "")}</div>
+                      <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 16, color: "#fff", fontWeight: 700 }}>{s.correct}/{s.total}</div>
+                      <div style={{ height: 3, background: "#1e293b", borderRadius: 2, marginTop: 6 }}>
+                        <div style={{ height: "100%", width: `${s.total > 0 ? (s.correct / s.total) * 100 : 0}%`, background: s.color, borderRadius: 2 }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <button onClick={() => { setMockAnswers({}); setMockSubmitted(false); window.scrollTo(0, 0); }}
+                  style={{ padding: "10px 24px", background: "#F0A500", color: "#0a0f1e", borderRadius: 8, cursor: "pointer", border: "none", fontFamily: "'Source Sans 3', sans-serif", fontWeight: 700, fontSize: 14 }}>
+                  Retake Test
+                </button>
+                <button onClick={() => setView("learn")}
+                  style={{ padding: "10px 24px", background: "#1e293b", color: "#94a3b8", borderRadius: 8, cursor: "pointer", border: "none", fontFamily: "'Source Sans 3', sans-serif", fontSize: 14 }}>
+                  Review Learning Materials
+                </button>
+              </div>
             </div>
           )}
-          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>Pass: 70%</span>
-        </div>
 
-        <div style={{ maxWidth: 770, margin: "0 auto", padding: "clamp(14px,4vw,32px) clamp(12px,4vw,20px)" }}>
-          {MOCK_TEST.map((q, qi) => {
-            const sec = SECTIONS.find(s => s.id === q.section);
-            const col = sec ? sec.color : T.navy;
+          {MOCK_TEST_QUESTIONS.map((q, qi) => {
             const isCorrect = mockAnswers[qi] === q.answer;
+            const sectionDef = SECTIONS.find(s => q.section.toLowerCase().includes(s.id === "fundamentals" ? "fundamental" : s.id === "compliance" ? "compliance" : s.id === "infrastructure" ? "infrastructure" : s.id === "working" ? "working" : s.id === "maintenance" ? "maintenance" : s.id === "power" ? "power" : "cooling"));
+            const col = sectionDef ? sectionDef.color : "#00B4D8";
             return (
-              <div key={qi} style={{ background: T.white, borderRadius: 10, padding: "clamp(13px,3vw,18px)", marginBottom: 12,
-                border: mockSubmitted ? `1px solid ${isCorrect ? "#16a34a35" : "#dc262635"}` : `1px solid ${T.border}`, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9 }}>
-                  <span style={{ fontSize: 9, color: col, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: 700 }}>{sec?.icon} {sec?.title.replace("Data Centre ", "").replace("The Physical ", "")}</span>
-                  {mockSubmitted && <span style={{ marginLeft: "auto" }}>{isCorrect ? "✅" : "❌"}</span>}
+              <div key={qi} style={{ background: "#0d1b2a", borderRadius: 12, padding: 24, marginBottom: 16, border: mockSubmitted ? `1px solid ${isCorrect ? "#22C55E30" : "#EF444430"}` : "1px solid #1e293b" }}>
+                <div style={{ display: "flex", gap: 10, marginBottom: 4 }}>
+                  <span style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 11, color: col, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>{q.section}</span>
+                  {mockSubmitted && <span style={{ marginLeft: "auto", fontSize: 16 }}>{isCorrect ? "✅" : "❌"}</span>}
                 </div>
-                <div style={{ display: "flex", gap: 9, marginBottom: 10 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${col}12`, color: col, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, flexShrink: 0 }}>{qi + 1}</div>
-                  <p style={{ fontSize: "clamp(13px,2vw,14px)", color: T.text, lineHeight: 1.55, fontWeight: 500 }}>{q.q}</p>
+                <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+                  <div style={{ background: `${col}20`, color: col, width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Source Sans 3', sans-serif", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{qi + 1}</div>
+                  <p style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 15, color: "#e8f4f8", lineHeight: 1.5 }}>{q.q}</p>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                   {q.options.map((opt, oi) => {
-                    let bg = T.bgAlt, border = T.border, color = T.slate;
-                    if (!mockSubmitted && mockAnswers[qi] === oi) { bg = `${col}10`; border = col; color = T.text; }
+                    let bg = "#08111C", border = "#1e293b", textColor = "#94a3b8";
+                    if (!mockSubmitted && mockAnswers[qi] === oi) { bg = `${col}20`; border = col; textColor = "#fff"; }
                     if (mockSubmitted) {
-                      if (oi === q.answer) { bg = "#f0fdf4"; border = "#16a34a"; color = T.text; }
-                      else if (mockAnswers[qi] === oi) { bg = "#fef2f2"; border = "#dc2626"; color = T.text; }
-                      else { bg = T.bgAlt; color = T.muted; }
+                      if (oi === q.answer) { bg = "rgba(34,197,94,0.12)"; border = "#22C55E"; textColor = "#e8f4f8"; }
+                      else if (mockAnswers[qi] === oi) { bg = "rgba(239,68,68,0.12)"; border = "#EF4444"; textColor = "#e8f4f8"; }
+                      else { bg = "#08111C"; border = "#1e293b"; textColor = "#475569"; }
                     }
                     return (
                       <button key={oi} className="opt-btn" disabled={mockSubmitted}
                         onClick={() => { if (!mockSubmitted) setMockAnswers(a => ({ ...a, [qi]: oi })); }}
-                        style={{ padding: "8px 11px", background: bg, border: `1px solid ${border}`, borderRadius: 6, color, fontSize: "clamp(11px,1.8vw,13px)", display: "flex", alignItems: "center", gap: 7, textAlign: "left", cursor: mockSubmitted ? "default" : "pointer" }}>
-                        <span style={{ width: 17, height: 17, borderRadius: "50%", border: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, flexShrink: 0, fontWeight: 700 }}>
-                          {mockSubmitted ? (oi === q.answer ? "✓" : mockAnswers[qi] === oi ? "✗" : String.fromCharCode(65+oi)) : String.fromCharCode(65+oi)}
+                        style={{ padding: "11px 14px", background: bg, border: `1px solid ${border}`, borderRadius: 8, color: textColor, fontFamily: "'Source Sans 3', sans-serif", fontSize: 14, display: "flex", alignItems: "center", gap: 10 }}>
+                        <span style={{ width: 22, height: 22, borderRadius: "50%", border: `1px solid ${border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, flexShrink: 0 }}>
+                          {mockSubmitted ? (oi === q.answer ? "✓" : mockAnswers[qi] === oi ? "✗" : String.fromCharCode(65 + oi)) : String.fromCharCode(65 + oi)}
                         </span>
                         {opt}
                       </button>
@@ -1573,67 +787,22 @@ export default function App() {
           })}
 
           {!mockSubmitted && (
-            <button disabled={answered < MOCK_TEST.length} onClick={() => { setMockSubmitted(true); setMockTimerRunning(false); window.scrollTo(0, 0); }}
-              style={{ width: "100%", padding: 14, background: answered === MOCK_TEST.length ? T.navy : T.bgAlt, color: answered === MOCK_TEST.length ? T.white : T.muted, borderRadius: 9, border: `1px solid ${answered === MOCK_TEST.length ? T.navy : T.border}`, fontSize: 14, fontWeight: 700, cursor: answered === MOCK_TEST.length ? "pointer" : "not-allowed", marginTop: 4 }}>
-              {answered < MOCK_TEST.length ? `Answer all questions first (${answered}/30)` : "Submit Mock Test →"}
-            </button>
-          )}
-
-          {/* Results at bottom */}
-          {mockSubmitted && (
-            <div className="fade-in" style={{ marginTop: 24, background: pct >= 70 ? "#f0fdf4" : "#fef2f2", border: `1px solid ${pct >= 70 ? T.success : T.danger}35`, borderRadius: 14, padding: "clamp(18px,4vw,30px)" }}>
-              <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap", marginBottom: 22 }}>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(44px,8vw,58px)", fontWeight: 900, color: pct >= 70 ? T.success : T.danger, lineHeight: 1 }}>{score}</div>
-                  <div style={{ fontSize: 12, color: T.slateLt }}>out of 30</div>
+            <div style={{ position: "sticky", bottom: 0, background: "#0a0f1e", borderTop: "1px solid #1e293b", padding: "16px 0", marginTop: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+                <div style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: 14, color: "#64748b" }}>
+                  {totalAnswered} / {MOCK_TEST_QUESTIONS.length} answered
+                  <span style={{ marginLeft: 12, display: "inline-block", width: 120, height: 4, background: "#1e293b", borderRadius: 2, verticalAlign: "middle" }}>
+                    <span style={{ display: "block", height: "100%", width: `${(totalAnswered / MOCK_TEST_QUESTIONS.length) * 100}%`, background: "#F0A500", borderRadius: 2, transition: "width 0.3s" }} />
+                  </span>
                 </div>
-                <div>
-                  <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(22px,4vw,30px)", color: T.text, marginBottom: 3 }}>{pct}%</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: pct >= 70 ? T.success : T.danger }}>{pct >= 70 ? "✓ PASS" : "✗ FAIL"}</div>
-                  <div style={{ fontSize: 12, color: T.slateLt, marginTop: 3 }}>Pass mark: 70% (21/30)</div>
-                  {mockTimerRunning === false && mockTimer > 0 && mockTimer < 45*60 && (
-                    <div style={{ fontSize: 12, color: T.slateLt, marginTop: 2 }}>Time used: {fmtTime(45*60 - mockTimer)}</div>
-                  )}
-                </div>
-              </div>
-                <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 10, color: T.muted, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600, marginBottom: 10 }}>Score by Module</div>
-                <div className="breakdown-grid">
-                  {sectionBreakdown.map(s => (
-                    <div key={s.id} style={{ background: T.white, borderRadius: 8, padding: "10px 12px", border: `1px solid ${T.border}`, borderTop: `3px solid ${s.color}` }}>
-                      <div style={{ fontSize: 10, color: s.color, marginBottom: 3, fontWeight: 600 }}>{s.icon} {s.title.replace("Data Centre ", "")}</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: T.text }}>{s.correct}/{s.total}</div>
-                      <div style={{ height: 3, background: T.bgAlt, borderRadius: 2, marginTop: 5 }}>
-                        <div style={{ height: "100%", width: `${s.total > 0 ? (s.correct/s.total)*100 : 0}%`, background: s.color, borderRadius: 2 }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
-                <button onClick={() => { setMockAnswers({}); setMockSubmitted(false); setMockTimer(45*60); setMockTimerRunning(false); window.scrollTo(0,0); }}
-                  style={{ padding: "10px 20px", background: T.navy, color: T.white, borderRadius: 7, border: "none", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Retake Test</button>
-                <button onClick={() => goToLearn(SECTIONS[0].id)}
-                  style={{ padding: "10px 18px", background: T.white, color: T.navy, borderRadius: 7, border: `1px solid ${T.border}`, fontSize: 13, cursor: "pointer" }}>Review Learning</button>
+                <button disabled={totalAnswered < MOCK_TEST_QUESTIONS.length} onClick={() => { setMockSubmitted(true); window.scrollTo(0, 0); }}
+                  style={{ padding: "12px 32px", background: totalAnswered === MOCK_TEST_QUESTIONS.length ? "#F0A500" : "#1e293b", color: totalAnswered === MOCK_TEST_QUESTIONS.length ? "#0a0f1e" : "#475569", borderRadius: 8, cursor: totalAnswered === MOCK_TEST_QUESTIONS.length ? "pointer" : "not-allowed", border: "none", fontFamily: "'Source Sans 3', sans-serif", fontSize: 15, fontWeight: 700 }}>
+                  Submit Mock Test →
+                </button>
               </div>
             </div>
           )}
         </div>
-
-        {/* Sticky progress bar */}
-        {!mockSubmitted && (
-          <div className="no-print" style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: T.white, borderTop: `1px solid ${T.border}`, padding: "8px clamp(12px,3vw,20px)", zIndex: 30, boxShadow: "0 -2px 8px rgba(0,0,0,0.06)" }}>
-            <div style={{ maxWidth: 770, margin: "0 auto", display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ flex: 1, height: 5, background: T.bgAlt, borderRadius: 3, minWidth: 0 }}>
-                <div style={{ height: "100%", width: `${(answered/MOCK_TEST.length)*100}%`, background: T.navy, borderRadius: 3, transition: "width 0.3s" }} />
-              </div>
-              <span style={{ fontSize: 12, color: T.slateLt, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>{answered}/30</span>
-              {mockTimerRunning && (
-                <span style={{ fontSize: 13, fontWeight: 700, color: timerColor, fontFamily: "monospace", whiteSpace: "nowrap", flexShrink: 0 }}>⏱ {fmtTime(mockTimer)}</span>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     );
   }
